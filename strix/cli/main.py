@@ -229,9 +229,6 @@ def clone_repository(repo_url: str, run_name: str) -> str:
                 [
                     git_executable,
                     "clone",
-                    "--depth=1",
-                    "--no-recurse-submodules",
-                    "--single-branch",
                     repo_url,
                     str(clone_path),
                 ],

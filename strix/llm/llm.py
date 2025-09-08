@@ -313,7 +313,7 @@ class LLM:
             completion_args["stop"] = ["</function>"]
 
         if self._should_include_reasoning_effort():
-            completion_args["reasoning_effort"] = "medium"
+            completion_args["reasoning_effort"] = "high"
 
         queue = get_global_queue()
         response = await queue.make_request(completion_args)
@@ -348,7 +348,7 @@ class LLM:
 
             try:
                 cost = completion_cost(response) or 0.0
-            except (ValueError, TypeError, RuntimeError) as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning(f"Failed to calculate cost: {e}")
                 cost = 0.0
 
@@ -370,5 +370,5 @@ class LLM:
                 logger.info(f"Cache creation: {cache_creation_tokens} tokens written to cache")
 
             logger.info(f"Usage stats: {self.usage_stats}")
-        except (AttributeError, TypeError, ValueError) as e:
+        except Exception as e:  # noqa: BLE001
             logger.warning(f"Failed to update usage stats: {e}")
