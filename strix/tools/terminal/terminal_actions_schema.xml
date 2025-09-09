@@ -55,8 +55,10 @@
   1. PERSISTENT SESSION: The terminal maintains state between commands. Environment variables,
      current directory, and running processes persist across multiple tool calls.
 
-  2. COMMAND EXECUTION: Execute one command at a time. For multiple commands, chain them with
-     && or ; operators, or make separate tool calls.
+  2. COMMAND EXECUTION:
+     - AVOID: Long pipelines, complex bash scripts, or convoluted one-liners
+     - Break complex operations into multiple simple tool calls for clarity and debugging
+     - For multiple commands, prefer separate tool calls over chaining with && or ;
 
   3. LONG-RUNNING COMMANDS:
      - Commands never get killed automatically - they keep running in background
