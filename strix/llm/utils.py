@@ -1,3 +1,4 @@
+import html
 import re
 from typing import Any
 
@@ -36,6 +37,8 @@ def parse_tool_invocations(content: str) -> list[dict[str, Any]] | None:
         for param_match in param_matches:
             param_name = param_match.group(1)
             param_value = param_match.group(2).strip()
+
+            param_value = html.unescape(param_value)
             args[param_name] = param_value
 
         tool_invocations.append({"toolName": fn_name, "args": args})
