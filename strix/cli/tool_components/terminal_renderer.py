@@ -125,7 +125,7 @@ class TerminalRenderer(BaseToolRenderer):
         if not command:
             return ""
 
-        if len(command) > 200:
-            command = command[:197] + "..."
+        if len(command) > 400:
+            command = command[:397] + "..."
 
         return cls.escape_markup(command)

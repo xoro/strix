@@ -28,11 +28,11 @@ class ScanStartInfoRenderer(BaseToolRenderer):
     @classmethod
     def _build_target_display(cls, target: dict[str, Any]) -> str:
         if target_url := target.get("target_url"):
-            return f"[bold #22c55e]{target_url}[/bold #22c55e]"
+            return f"[bold #22c55e]{target_url}[/]"
         if target_repo := target.get("target_repo"):
-            return f"[bold #22c55e]{target_repo}[/bold #22c55e]"
+            return f"[bold #22c55e]{target_repo}[/]"
         if target_path := target.get("target_path"):
-            return f"[bold #22c55e]{target_path}[/bold #22c55e]"
+            return f"[bold #22c55e]{target_path}[/]"
         return "[dim]unknown target[/dim]"
 
 
@@ -49,7 +49,7 @@ class SubagentStartInfoRenderer(BaseToolRenderer):
         name = args.get("name", "Unknown Agent")
         task = args.get("task", "")
 
-        content = f"🤖 Spawned subagent [bold #22c55e]{name}[/bold #22c55e]"
+        content = f"🤖 Spawned subagent [bold #22c55e]{name}[/]"
         if task:
             content += f"\n    Task: [dim]{task}[/dim]"
 

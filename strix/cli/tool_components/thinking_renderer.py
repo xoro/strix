@@ -20,7 +20,7 @@ class ThinkRenderer(BaseToolRenderer):
         header = "🧠 [bold #a855f7]Thinking[/]"
 
         if thought:
-            thought_display = thought[:200] + "..." if len(thought) > 200 else thought
+            thought_display = thought[:600] + "..." if len(thought) > 600 else thought
             content = f"{header}\n  [italic dim]{cls.escape_markup(thought_display)}[/]"
         else:
             content = f"{header}\n  [italic dim]Thinking...[/]"

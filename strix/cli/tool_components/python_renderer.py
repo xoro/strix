@@ -21,7 +21,7 @@ class PythonRenderer(BaseToolRenderer):
         header = "</> [bold #3b82f6]Python[/]"
 
         if code and action in ["new_session", "execute"]:
-            code_display = code[:250] + "..." if len(code) > 250 else code
+            code_display = code[:600] + "..." if len(code) > 600 else code
             content_text = f"{header}\n  [italic white]{cls.escape_markup(code_display)}[/]"
         elif action == "close":
             content_text = f"{header}\n  [dim]Closing session...[/]"

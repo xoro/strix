@@ -577,10 +577,8 @@ def pull_docker_image() -> None:
         return
 
     console.print()
-    console.print(f"[bold cyan]🐳 Pulling Docker image:[/bold cyan] {STRIX_IMAGE}")
-    console.print(
-        "[dim yellow]This only happens on first run and may take a few minutes...[/dim yellow]"
-    )
+    console.print(f"[bold cyan]🐳 Pulling Docker image:[/] {STRIX_IMAGE}")
+    console.print("[dim yellow]This only happens on first run and may take a few minutes...[/]")
     console.print()
 
     with console.status("[bold cyan]Downloading image layers...", spinner="dots") as status:

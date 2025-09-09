@@ -556,7 +556,9 @@ class StrixCLIApp(App):  # type: ignore[misc]
                 current_verb = self._get_agent_verb(self.selected_agent_id)
                 animated_text = self._get_animated_verb_text(self.selected_agent_id, current_verb)
                 self._safe_widget_operation(status_text.update, animated_text)
-                self._safe_widget_operation(keymap_indicator.update, "[dim]ESC to stop agent[/dim]")
+                self._safe_widget_operation(
+                    keymap_indicator.update, "[dim]ESC to stop | CTRL-C to quit and save[/dim]"
+                )
                 self._safe_widget_operation(status_display.remove_class, "hidden")
                 self._start_dot_animation()
             else:
