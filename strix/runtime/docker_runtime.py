@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 import secrets
@@ -78,10 +79,23 @@ class DockerRuntime(AbstractRuntime):
 
     def _create_container_with_retry(self, scan_id: str, max_retries: int = 3) -> Container:
         last_exception = None
+        container_name = f"strix-scan-{scan_id}"
 
         for attempt in range(max_retries):
             try:
                 self._verify_image_available(STRIX_IMAGE)
+
+                try:
+                    existing_container = self.client.containers.get(container_name)
+                    logger.warning(f"Container {container_name} already exists, removing it")
+                    with contextlib.suppress(Exception):
+                        existing_container.stop(timeout=5)
+                    existing_container.remove(force=True)
+                    time.sleep(1)
+                except NotFound:
+                    pass
+                except DockerException as e:
+                    logger.warning(f"Error checking/removing existing container: {e}")
 
                 caido_port = self._find_available_port()
                 tool_server_port = self._find_available_port()
@@ -94,7 +108,7 @@ class DockerRuntime(AbstractRuntime):
                     STRIX_IMAGE,
                     command="sleep infinity",
                     detach=True,
-                    name=f"strix-scan-{scan_id}",
+                    name=container_name,
                     hostname=f"strix-scan-{scan_id}",
                     ports={
                         f"{caido_port}/tcp": caido_port,
@@ -137,7 +151,9 @@ class DockerRuntime(AbstractRuntime):
             f"Failed to create Docker container after {max_retries} attempts: {last_exception}"
         ) from last_exception
 
-    def _get_or_create_scan_container(self, scan_id: str) -> Container:
+    def _get_or_create_scan_container(self, scan_id: str) -> Container:  # noqa: PLR0912
+        container_name = f"strix-scan-{scan_id}"
+
         if self._scan_container:
             try:
                 self._scan_container.reload()
@@ -149,7 +165,43 @@ class DockerRuntime(AbstractRuntime):
                 self._tool_server_token = None
 
         try:
-            containers = self.client.containers.list(filters={"label": f"strix-scan-id={scan_id}"})
+            container = self.client.containers.get(container_name)
+            container.reload()
+
+            if (
+                "strix-scan-id" not in container.labels
+                or container.labels["strix-scan-id"] != scan_id
+            ):
+                logger.warning(
+                    f"Container {container_name} exists but missing/wrong label, updating"
+                )
+
+            if container.status != "running":
+                logger.info(f"Starting existing container {container_name}")
+                container.start()
+                time.sleep(2)
+
+            self._scan_container = container
+
+            for env_var in container.attrs["Config"]["Env"]:
+                if env_var.startswith("TOOL_SERVER_PORT="):
+                    self._tool_server_port = int(env_var.split("=")[1])
+                elif env_var.startswith("TOOL_SERVER_TOKEN="):
+                    self._tool_server_token = env_var.split("=")[1]
+
+            logger.info(f"Reusing existing container {container_name}")
+
+        except NotFound:
+            pass
+        except DockerException as e:
+            logger.warning(f"Failed to get container by name {container_name}: {e}")
+        else:
+            return container
+
+        try:
+            containers = self.client.containers.list(
+                all=True, filters={"label": f"strix-scan-id={scan_id}"}
+            )
             if containers:
                 container = cast("Container", containers[0])
                 if container.status != "running":
@@ -163,9 +215,10 @@ class DockerRuntime(AbstractRuntime):
                     elif env_var.startswith("TOOL_SERVER_TOKEN="):
                         self._tool_server_token = env_var.split("=")[1]
 
+                logger.info(f"Found existing container by label for scan {scan_id}")
                 return container
         except DockerException as e:
-            logger.warning("Failed to find existing container for scan %s: %s", scan_id, e)
+            logger.warning("Failed to find existing container by label for scan %s: %s", scan_id, e)
 
         logger.info("Creating new Docker container for scan %s", scan_id)
         return self._create_container_with_retry(scan_id)
