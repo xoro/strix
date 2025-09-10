@@ -420,6 +420,7 @@ class StrixCLIApp(App):  # type: ignore[misc]
                 "failed": "❌",
                 "stopped": "⏹️",
                 "stopping": "⏸️",
+                "llm_failed": "🔴",
             }
 
             status_icon = status_indicators.get(status, "🔵")
@@ -544,6 +545,12 @@ class StrixCLIApp(App):  # type: ignore[misc]
                 self._safe_widget_operation(status_text.update, "Agent completed")
                 self._safe_widget_operation(keymap_indicator.update, "")
                 self._safe_widget_operation(status_display.remove_class, "hidden")
+            elif status == "llm_failed":
+                self._safe_widget_operation(status_text.update, "[red]LLM request failed[/red]")
+                self._safe_widget_operation(
+                    keymap_indicator.update, "[dim]Send message to retry[/dim]"
+                )
+                self._safe_widget_operation(status_display.remove_class, "hidden")
             elif status == "waiting":
                 animated_text = self._get_animated_waiting_text(self.selected_agent_id)
                 self._safe_widget_operation(status_text.update, animated_text)
@@ -626,7 +633,7 @@ class StrixCLIApp(App):  # type: ignore[misc]
 
         for agent_id, agent_data in self.tracer.agents.items():
             status = agent_data.get("status", "running")
-            if status in ["running", "waiting"]:
+            if status in ["running", "waiting", "llm_failed"]:
                 has_active_agents = True
                 current_dots = self._agent_dot_states.get(agent_id, 0)
                 self._agent_dot_states[agent_id] = (current_dots + 1) % 4
@@ -637,7 +644,7 @@ class StrixCLIApp(App):  # type: ignore[misc]
             and self.selected_agent_id in self.tracer.agents
         ):
             selected_status = self.tracer.agents[self.selected_agent_id].get("status", "running")
-            if selected_status in ["running", "waiting"]:
+            if selected_status in ["running", "waiting", "llm_failed"]:
                 self._update_agent_status_display()
 
         if not has_active_agents:
@@ -645,7 +652,7 @@ class StrixCLIApp(App):  # type: ignore[misc]
             for agent_id in list(self._agent_dot_states.keys()):
                 if agent_id not in self.tracer.agents or self.tracer.agents[agent_id].get(
                     "status"
-                ) not in ["running", "waiting"]:
+                ) not in ["running", "waiting", "llm_failed"]:
                     del self._agent_dot_states[agent_id]
 
     def _gather_agent_events(self, agent_id: str) -> list[dict[str, Any]]:

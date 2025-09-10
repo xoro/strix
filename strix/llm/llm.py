@@ -28,6 +28,11 @@ api_key = os.getenv("LLM_API_KEY")
 if api_key:
     litellm.api_key = api_key
 
+
+class LLMRequestFailedError(Exception):
+    """Raised when LLM request fails after all retry attempts."""
+
+
 MODELS_WITHOUT_STOP_WORDS = [
     "gpt-5",
     "gpt-5-mini",
@@ -250,15 +255,8 @@ class LLM:
                 tool_invocations=tool_invocations if tool_invocations else None,
             )
 
-        except (ValueError, TypeError, RuntimeError):
-            logger.exception("Error in LLM generation")
-            return LLMResponse(
-                scan_id=scan_id,
-                step_number=step_number,
-                role=StepRole.AGENT,
-                content="An error occurred while generating the response",
-                tool_invocations=None,
-            )
+        except Exception as e:
+            raise LLMRequestFailedError("LLM request failed after all retry attempts") from e
 
     @property
     def usage_stats(self) -> dict[str, dict[str, int | float]]:
@@ -307,6 +305,7 @@ class LLM:
             "model": self.config.model_name,
             "messages": messages,
             "temperature": self.config.temperature,
+            "timeout": 180,
         }
 
         if self._should_include_stop_param():

@@ -30,6 +30,8 @@ class BrowserRenderer(BaseToolRenderer):
         url = args.get("url")
         text = args.get("text")
         js_code = args.get("js_code")
+        key = args.get("key")
+        file_path = args.get("file_path")
 
         if action in [
             "launch",
@@ -40,6 +42,8 @@ class BrowserRenderer(BaseToolRenderer):
             "click",
             "double_click",
             "hover",
+            "press_key",
+            "save_pdf",
         ]:
             if action == "launch":
                 display_url = cls._format_url(url) if url else None
@@ -60,6 +64,12 @@ class BrowserRenderer(BaseToolRenderer):
                 message = (
                     f"executing javascript\n{display_js}" if display_js else "executing javascript"
                 )
+            elif action == "press_key":
+                display_key = cls.escape_markup(key) if key else None
+                message = f"pressing key {display_key}" if display_key else "pressing key"
+            elif action == "save_pdf":
+                display_path = cls.escape_markup(file_path) if file_path else None
+                message = f"saving PDF to {display_path}" if display_path else "saving PDF"
             else:
                 action_words = {
                     "click": "clicking",
@@ -73,11 +83,14 @@ class BrowserRenderer(BaseToolRenderer):
         simple_actions = {
             "back": "going back in browser history",
             "forward": "going forward in browser history",
+            "scroll_down": "scrolling down",
+            "scroll_up": "scrolling up",
             "refresh": "refreshing browser tab",
             "close_tab": "closing browser tab",
             "switch_tab": "switching browser tab",
             "list_tabs": "listing browser tabs",
             "view_source": "viewing page source",
+            "get_console_logs": "getting console logs",
             "screenshot": "taking screenshot of browser tab",
             "wait": "waiting...",
             "close": "closing browser",

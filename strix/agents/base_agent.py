@@ -13,7 +13,7 @@ from jinja2 import (
     select_autoescape,
 )
 
-from strix.llm import LLM, LLMConfig
+from strix.llm import LLM, LLMConfig, LLMRequestFailedError
 from strix.llm.utils import clean_content
 from strix.tools import process_tool_invocations
 
@@ -164,6 +164,10 @@ class BaseAgent(metaclass=AgentMeta):
                 await self._enter_waiting_state(tracer)
                 continue
 
+            if self.state.llm_failed:
+                await self._wait_for_input()
+                continue
+
             self.state.increment_iteration()
 
             try:
@@ -174,6 +178,13 @@ class BaseAgent(metaclass=AgentMeta):
 
             except asyncio.CancelledError:
                 await self._enter_waiting_state(tracer, error_occurred=False, was_cancelled=True)
+                continue
+
+            except LLMRequestFailedError as e:
+                self.state.add_error(f"LLM request failed: {e}")
+                self.state.enter_waiting_state(llm_failed=True)
+                if tracer:
+                    tracer.update_agent_status(self.state.agent_id, "llm_failed")
                 continue
 
             except (RuntimeError, ValueError, TypeError) as e:
@@ -327,7 +338,7 @@ class BaseAgent(metaclass=AgentMeta):
             tracer.update_agent_status(self.state.agent_id, "error")
         return True
 
-    def _check_agent_messages(self, state: AgentState) -> None:
+    def _check_agent_messages(self, state: AgentState) -> None:  # noqa: PLR0912
         try:
             from strix.tools.agents_graph.agents_graph_actions import _agent_graph, _agent_messages
 
@@ -340,12 +351,28 @@ class BaseAgent(metaclass=AgentMeta):
                 has_new_messages = False
                 for message in messages:
                     if not message.get("read", False):
-                        if state.is_waiting_for_input():
-                            state.resume_from_waiting()
-                            has_new_messages = True
-
-                        sender_name = "Unknown Agent"
                         sender_id = message.get("from")
+
+                        if state.is_waiting_for_input():
+                            if state.llm_failed:
+                                if sender_id == "user":
+                                    state.resume_from_waiting()
+                                    has_new_messages = True
+
+                                    from strix.cli.tracer import get_global_tracer
+
+                                    tracer = get_global_tracer()
+                                    if tracer:
+                                        tracer.update_agent_status(state.agent_id, "running")
+                            else:
+                                state.resume_from_waiting()
+                                has_new_messages = True
+
+                                from strix.cli.tracer import get_global_tracer
+
+                                tracer = get_global_tracer()
+                                if tracer:
+                                    tracer.update_agent_status(state.agent_id, "running")
 
                         if sender_id == "user":
                             sender_name = "User"

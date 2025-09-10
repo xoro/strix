@@ -106,10 +106,13 @@ def _summarize_messages(
         completion_args = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
+            "timeout": 180,
         }
 
         response = litellm.completion(**completion_args)
-        summary = response.choices[0].message.content
+        summary = response.choices[0].message.content or ""
+        if not summary.strip():
+            return messages[0]
         summary_msg = "<context_summary message_count='{count}'>{text}</context_summary>"
         return {
             "role": "assistant",

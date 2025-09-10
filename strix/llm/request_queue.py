@@ -38,8 +38,8 @@ class LLMRequestQueue:
             self._semaphore.release()
 
     @retry(  # type: ignore[misc]
-        stop=stop_after_attempt(15),
-        wait=wait_exponential(multiplier=1.2, min=1, max=300),
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=2, min=1, max=30),
         reraise=True,
     )
     async def _reliable_request(self, completion_args: dict[str, Any]) -> ModelResponse:

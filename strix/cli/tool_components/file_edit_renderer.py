@@ -25,6 +25,10 @@ class StrReplaceEditorRenderer(BaseToolRenderer):
             header = "✏️ [bold #10b981]Editing file[/]"
         elif command == "create":
             header = "📝 [bold #10b981]Creating file[/]"
+        elif command == "insert":
+            header = "✏️ [bold #10b981]Inserting text[/]"
+        elif command == "undo_edit":
+            header = "↩️ [bold #10b981]Undoing edit[/]"
         else:
             header = "📄 [bold #10b981]File operation[/]"
 

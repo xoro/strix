@@ -23,6 +23,7 @@ class AgentState(BaseModel):
     completed: bool = False
     stop_requested: bool = False
     waiting_for_input: bool = False
+    llm_failed: bool = False
     final_result: dict[str, Any] | None = None
 
     messages: list[dict[str, Any]] = Field(default_factory=list)
@@ -85,15 +86,17 @@ class AgentState(BaseModel):
     def is_waiting_for_input(self) -> bool:
         return self.waiting_for_input
 
-    def enter_waiting_state(self) -> None:
+    def enter_waiting_state(self, llm_failed: bool = False) -> None:
         self.waiting_for_input = True
         self.stop_requested = False
+        self.llm_failed = llm_failed
         self.last_updated = datetime.now(UTC).isoformat()
 
     def resume_from_waiting(self, new_task: str | None = None) -> None:
         self.waiting_for_input = False
         self.stop_requested = False
         self.completed = False
+        self.llm_failed = False
         if new_task:
             self.task = new_task
         self.last_updated = datetime.now(UTC).isoformat()
