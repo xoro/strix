@@ -9,8 +9,8 @@ import threading
 from collections.abc import Callable
 from typing import Any, ClassVar
 
-from rich.markup import MarkupError
 from rich.markup import escape as rich_escape
+from rich.text import Text
 from textual import events, on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -550,7 +550,9 @@ class StrixCLIApp(App):  # type: ignore[misc]
             elif status == "llm_failed":
                 error_msg = agent_data.get("error_message", "")
                 display_msg = (
-                    f"[red]{error_msg}[/red]" if error_msg else "[red]LLM request failed[/red]"
+                    f"[red]{escape_markup(error_msg)}[/red]"
+                    if error_msg
+                    else "[red]LLM request failed[/red]"
                 )
                 self._safe_widget_operation(status_text.update, display_msg)
                 self._safe_widget_operation(
@@ -954,7 +956,7 @@ class StrixCLIApp(App):  # type: ignore[misc]
             content = "\n".join(lines)
 
         lines = content.split("\n")
-        bordered_lines = [f"[{color}]▍[/] {line}" for line in lines]
+        bordered_lines = [f"[{color}]▍[/{color}] {line}" for line in lines]
         return "\n".join(bordered_lines)
 
     @on(Tree.NodeHighlighted)  # type: ignore[misc]
@@ -1146,11 +1148,15 @@ class StrixCLIApp(App):  # type: ignore[misc]
     def _update_static_content_safe(self, widget: Static, content: str) -> None:
         try:
             widget.update(content)
-        except MarkupError:
+        except Exception:  # noqa: BLE001
             try:
-                widget.update(rich_escape(content))
-            except Exception:
-                widget.update(rich_escape(str(content)))
+                safe_text = Text.from_markup(content)
+                widget.update(safe_text)
+            except Exception:  # noqa: BLE001
+                import re
+
+                plain_text = re.sub(r"\[.*?\]", "", content)
+                widget.update(plain_text)
 
 
 async def run_strix_cli(args: argparse.Namespace) -> None:
