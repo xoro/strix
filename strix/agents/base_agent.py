@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
@@ -75,6 +76,8 @@ class BaseAgent(metaclass=AgentMeta):
                 max_iterations=self.max_iterations,
             )
 
+        with contextlib.suppress(Exception):
+            self.llm.set_agent_identity(self.agent_name, self.state.agent_id)
         self._current_task: asyncio.Task[Any] | None = None
 
         from strix.telemetry.tracer import get_global_tracer

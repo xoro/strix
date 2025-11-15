@@ -135,9 +135,12 @@ class RequestStats:
 
 
 class LLM:
-    def __init__(self, config: LLMConfig, agent_name: str | None = None):
+    def __init__(
+        self, config: LLMConfig, agent_name: str | None = None, agent_id: str | None = None
+    ):
         self.config = config
         self.agent_name = agent_name
+        self.agent_id = agent_id
         self._total_stats = RequestStats()
         self._last_request_stats = RequestStats()
 
@@ -176,6 +179,31 @@ class LLM:
                 self.system_prompt = "You are a helpful AI assistant."
         else:
             self.system_prompt = "You are a helpful AI assistant."
+
+    def set_agent_identity(self, agent_name: str | None, agent_id: str | None) -> None:
+        if agent_name:
+            self.agent_name = agent_name
+        if agent_id:
+            self.agent_id = agent_id
+
+    def _build_identity_message(self) -> dict[str, Any] | None:
+        if not (self.agent_name and str(self.agent_name).strip()):
+            return None
+        identity_name = self.agent_name
+        identity_id = self.agent_id
+        content = (
+            "\n\n"
+            "<agent_identity>\n"
+            "<meta>Internal metadata: do not echo or reference; "
+            "not part of history or tool calls.</meta>\n"
+            "<note>You are now assuming the role of this agent. "
+            "Act strictly as this agent and maintain self-identity for this step. "
+            "Now go answer the next needed step!</note>\n"
+            f"<agent_name>{identity_name}</agent_name>\n"
+            f"<agent_id>{identity_id}</agent_id>\n"
+            "</agent_identity>\n\n"
+        )
+        return {"role": "user", "content": content}
 
     def _add_cache_control_to_content(
         self, content: str | list[dict[str, Any]]
@@ -251,6 +279,10 @@ class LLM:
         step_number: int = 1,
     ) -> LLMResponse:
         messages = [{"role": "system", "content": self.system_prompt}]
+
+        identity_message = self._build_identity_message()
+        if identity_message:
+            messages.append(identity_message)
 
         compressed_history = list(self.memory_compressor.compress_history(conversation_history))
 

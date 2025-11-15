@@ -87,10 +87,6 @@ Only create a new agent if no existing agent is handling the specific task.</des
       <description>Response containing: - agent_id: Unique identifier for the created agent - success: Whether the agent was created successfully - message: Status message - agent_info: Details about the created agent</description>
     </returns>
     <examples>
-  # REQUIRED: Check agent graph again before creating another agent
-  <function=view_agent_graph>
-  </function>
-
   # After confirming no SQL testing agent exists, create agent for vulnerability validation
   <function=create_agent>
   <parameter=task>Validate and exploit the suspected SQL injection vulnerability found in
@@ -125,11 +121,16 @@ Only create a new agent if no existing agent is handling the specific task.</des
   </tool>
   <tool name="send_message_to_agent">
     <description>Send a message to another agent in the graph for coordination and communication.</description>
-    <details>This enables agents to communicate with each other during execution for:
+    <details>This enables agents to communicate with each other during execution, but should be used only when essential:
   - Sharing discovered information or findings
   - Asking questions or requesting assistance
   - Providing instructions or coordination
-  - Reporting status or results</details>
+  - Reporting status or results
+
+Best practices:
+- Avoid routine status updates; batch non-urgent information
+- Prefer parent/child completion flows (agent_finish)
+- Do not message when the context is already known</details>
     <parameters>
       <parameter name="target_agent_id" type="string" required="true">
         <description>ID of the agent to send the message to</description>
