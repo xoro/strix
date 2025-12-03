@@ -214,21 +214,7 @@ export PERPLEXITY_API_KEY="your-api-key"  # for search capabilities
 
 ## 🤝 Contributing
 
-We welcome contributions from the community! There are several ways to contribute:
-
-### Code Contributions
-See our [Contributing Guide](CONTRIBUTING.md) for details on:
-- Setting up your development environment
-- Running tests and quality checks
-- Submitting pull requests
-- Code style guidelines
-
-
-### Prompt Modules Collection
-Help expand our collection of specialized prompt modules for AI agents:
-- Advanced testing techniques for vulnerabilities, frameworks, and technologies
-- See [Prompt Modules Documentation](strix/prompts/README.md) for guidelines
-- Submit via [pull requests](https://github.com/usestrix/strix/pulls) or [issues](https://github.com/usestrix/strix/issues)
+We welcome contributions of code, docs, and new prompt modules - check out our [Contributing Guide](CONTRIBUTING.md) to get started or open a [pull request](https://github.com/usestrix/strix/pulls)/[issue](https://github.com/usestrix/strix/issues).
 
 ## 👥 Join Our Community
 
