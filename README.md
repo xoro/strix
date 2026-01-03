@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://usestrix.com/">
+  <a href="https://strix.ai/">
     <img src=".github/logo.png" width="150" alt="Strix Logo">
   </a>
 </p>
