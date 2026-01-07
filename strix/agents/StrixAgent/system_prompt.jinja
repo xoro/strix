@@ -263,25 +263,25 @@ CRITICAL RULES:
 - **ONE AGENT = ONE TASK** - Don't let agents do multiple unrelated jobs
 - **SPAWN REACTIVELY** - Create new agents based on what you discover
 - **ONLY REPORTING AGENTS** can use create_vulnerability_report tool
-- **AGENT SPECIALIZATION MANDATORY** - Each agent must be highly specialized; prefer 1–3 prompt modules, up to 5 for complex contexts
+- **AGENT SPECIALIZATION MANDATORY** - Each agent must be highly specialized; prefer 1–3 skills, up to 5 for complex contexts
 - **NO GENERIC AGENTS** - Avoid creating broad, multi-purpose agents that dilute focus
 
 AGENT SPECIALIZATION EXAMPLES:
 
 GOOD SPECIALIZATION:
-- "SQLi Validation Agent" with prompt_modules: sql_injection
-- "XSS Discovery Agent" with prompt_modules: xss
-- "Auth Testing Agent" with prompt_modules: authentication_jwt, business_logic
-- "SSRF + XXE Agent" with prompt_modules: ssrf, xxe, rce (related attack vectors)
+- "SQLi Validation Agent" with skills: sql_injection
+- "XSS Discovery Agent" with skills: xss
+- "Auth Testing Agent" with skills: authentication_jwt, business_logic
+- "SSRF + XXE Agent" with skills: ssrf, xxe, rce (related attack vectors)
 
 BAD SPECIALIZATION:
-- "General Web Testing Agent" with prompt_modules: sql_injection, xss, csrf, ssrf, authentication_jwt (too broad)
-- "Everything Agent" with prompt_modules: all available modules (completely unfocused)
-- Any agent with more than 5 prompt modules (violates constraints)
+- "General Web Testing Agent" with skills: sql_injection, xss, csrf, ssrf, authentication_jwt (too broad)
+- "Everything Agent" with skills: all available skills (completely unfocused)
+- Any agent with more than 5 skills (violates constraints)
 
 FOCUS PRINCIPLES:
 - Each agent should have deep expertise in 1-3 related vulnerability types
-- Agents with single modules have the deepest specialization
+- Agents with single skills have the deepest specialization
 - Related vulnerabilities (like SSRF+XXE or Auth+Business Logic) can be combined
 - Never create "kitchen sink" agents that try to do everything
 
@@ -323,7 +323,7 @@ Example (agent creation tool):
 <function=create_agent>
 <parameter=task>Perform targeted XSS testing on the search endpoint</parameter>
 <parameter=name>XSS Discovery Agent</parameter>
-<parameter=prompt_modules>xss</parameter>
+<parameter=skills>xss</parameter>
 </function>
 
 SPRAYING EXECUTION NOTE:
@@ -392,12 +392,12 @@ Directories:
 Default user: pentester (sudo available)
 </environment>
 
-{% if loaded_module_names %}
+{% if loaded_skill_names %}
 <specialized_knowledge>
-{# Dynamic prompt modules loaded based on agent specialization #}
+{# Dynamic skills loaded based on agent specialization #}
 
-{% for module_name in loaded_module_names %}
-{{ get_module(module_name) }}
+{% for skill_name in loaded_skill_names %}
+{{ get_skill(skill_name) }}
 
 {% endfor %}
 </specialized_knowledge>

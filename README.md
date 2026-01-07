@@ -219,11 +219,11 @@ export PERPLEXITY_API_KEY="your-api-key"  # for search capabilities
 
 ## 📚 Documentation
 
-Full documentation is available at **[docs.strix.ai](https://docs.strix.ai)** — including detailed guides for usage, CI/CD integrations, prompt modules, and advanced configuration.
+Full documentation is available at **[docs.strix.ai](https://docs.strix.ai)** — including detailed guides for usage, CI/CD integrations, skills, and advanced configuration.
 
 ## 🤝 Contributing
 
-We welcome contributions of code, docs, and new prompt modules - check out our [Contributing Guide](https://docs.strix.ai/contributing) to get started or open a [pull request](https://github.com/usestrix/strix/pulls)/[issue](https://github.com/usestrix/strix/issues).
+We welcome contributions of code, docs, and new skills - check out our [Contributing Guide](https://docs.strix.ai/contributing) to get started or open a [pull request](https://github.com/usestrix/strix/pulls)/[issue](https://github.com/usestrix/strix/issues).
 
 ## 👥 Join Our Community
 

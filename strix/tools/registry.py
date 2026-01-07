@@ -23,17 +23,17 @@ class ImplementedInClientSideOnlyError(Exception):
 
 
 def _process_dynamic_content(content: str) -> str:
-    if "{{DYNAMIC_MODULES_DESCRIPTION}}" in content:
+    if "{{DYNAMIC_SKILLS_DESCRIPTION}}" in content:
         try:
-            from strix.prompts import generate_modules_description
+            from strix.skills import generate_skills_description
 
-            modules_description = generate_modules_description()
-            content = content.replace("{{DYNAMIC_MODULES_DESCRIPTION}}", modules_description)
+            skills_description = generate_skills_description()
+            content = content.replace("{{DYNAMIC_SKILLS_DESCRIPTION}}", skills_description)
         except ImportError:
-            logger.warning("Could not import prompts utilities for dynamic schema generation")
+            logger.warning("Could not import skills utilities for dynamic schema generation")
             content = content.replace(
-                "{{DYNAMIC_MODULES_DESCRIPTION}}",
-                "List of prompt modules to load for this agent (max 5). Module discovery failed.",
+                "{{DYNAMIC_SKILLS_DESCRIPTION}}",
+                "List of skills to load for this agent (max 5). Skill discovery failed.",
             )
 
     return content

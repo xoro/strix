@@ -20,7 +20,7 @@ from strix.llm.config import LLMConfig
 from strix.llm.memory_compressor import MemoryCompressor
 from strix.llm.request_queue import get_global_queue
 from strix.llm.utils import _truncate_to_first_function, parse_tool_invocations
-from strix.prompts import load_prompt_modules
+from strix.skills import load_skills
 from strix.tools import get_tools_prompt
 
 
@@ -116,29 +116,29 @@ class LLM:
 
         if agent_name:
             prompt_dir = Path(__file__).parent.parent / "agents" / agent_name
-            prompts_dir = Path(__file__).parent.parent / "prompts"
+            skills_dir = Path(__file__).parent.parent / "skills"
 
-            loader = FileSystemLoader([prompt_dir, prompts_dir])
+            loader = FileSystemLoader([prompt_dir, skills_dir])
             self.jinja_env = Environment(
                 loader=loader,
                 autoescape=select_autoescape(enabled_extensions=(), default_for_string=False),
             )
 
             try:
-                modules_to_load = list(self.config.prompt_modules or [])
-                modules_to_load.append(f"scan_modes/{self.config.scan_mode}")
+                skills_to_load = list(self.config.skills or [])
+                skills_to_load.append(f"scan_modes/{self.config.scan_mode}")
 
-                prompt_module_content = load_prompt_modules(modules_to_load, self.jinja_env)
+                skill_content = load_skills(skills_to_load, self.jinja_env)
 
-                def get_module(name: str) -> str:
-                    return prompt_module_content.get(name, "")
+                def get_skill(name: str) -> str:
+                    return skill_content.get(name, "")
 
-                self.jinja_env.globals["get_module"] = get_module
+                self.jinja_env.globals["get_skill"] = get_skill
 
                 self.system_prompt = self.jinja_env.get_template("system_prompt.jinja").render(
                     get_tools_prompt=get_tools_prompt,
-                    loaded_module_names=list(prompt_module_content.keys()),
-                    **prompt_module_content,
+                    loaded_skill_names=list(skill_content.keys()),
+                    **skill_content,
                 )
             except (FileNotFoundError, OSError, ValueError) as e:
                 logger.warning(f"Failed to load system prompt for {agent_name}: {e}")

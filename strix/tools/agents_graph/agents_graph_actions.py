@@ -190,36 +190,35 @@ def create_agent(
     task: str,
     name: str,
     inherit_context: bool = True,
-    prompt_modules: str | None = None,
+    skills: str | None = None,
 ) -> dict[str, Any]:
     try:
         parent_id = agent_state.agent_id
 
-        module_list = []
-        if prompt_modules:
-            module_list = [m.strip() for m in prompt_modules.split(",") if m.strip()]
+        skill_list = []
+        if skills:
+            skill_list = [s.strip() for s in skills.split(",") if s.strip()]
 
-        if len(module_list) > 5:
+        if len(skill_list) > 5:
             return {
                 "success": False,
                 "error": (
-                    "Cannot specify more than 5 prompt modules for an agent "
-                    "(use comma-separated format)"
+                    "Cannot specify more than 5 skills for an agent (use comma-separated format)"
                 ),
                 "agent_id": None,
             }
 
-        if module_list:
-            from strix.prompts import get_all_module_names, validate_module_names
+        if skill_list:
+            from strix.skills import get_all_skill_names, validate_skill_names
 
-            validation = validate_module_names(module_list)
+            validation = validate_skill_names(skill_list)
             if validation["invalid"]:
-                available_modules = list(get_all_module_names())
+                available_skills = list(get_all_skill_names())
                 return {
                     "success": False,
                     "error": (
-                        f"Invalid prompt modules: {validation['invalid']}. "
-                        f"Available modules: {', '.join(available_modules)}"
+                        f"Invalid skills: {validation['invalid']}. "
+                        f"Available skills: {', '.join(available_skills)}"
                     ),
                     "agent_id": None,
                 }
@@ -240,7 +239,7 @@ def create_agent(
             if hasattr(parent_agent.llm_config, "scan_mode"):
                 scan_mode = parent_agent.llm_config.scan_mode
 
-        llm_config = LLMConfig(prompt_modules=module_list, timeout=timeout, scan_mode=scan_mode)
+        llm_config = LLMConfig(skills=skill_list, timeout=timeout, scan_mode=scan_mode)
 
         agent_config = {
             "llm_config": llm_config,

@@ -39,14 +39,14 @@ Thank you for your interest in contributing to Strix! This guide will help you g
    poetry run strix --target https://example.com
    ```
 
-## 📚 Contributing Prompt Modules
+## 📚 Contributing Skills
 
-Prompt modules are specialized knowledge packages that enhance agent capabilities. See [strix/prompts/README.md](strix/prompts/README.md) for detailed guidelines.
+Skills are specialized knowledge packages that enhance agent capabilities. See [strix/skills/README.md](strix/skills/README.md) for detailed guidelines.
 
 ### Quick Guide
 
 1. **Choose the right category** (`/vulnerabilities`, `/frameworks`, `/technologies`, etc.)
-2. **Create a** `.jinja` file with your prompts
+2. **Create a** `.jinja` file with your skill content
 3. **Include practical examples** - Working payloads, commands, or test cases
 4. **Provide validation methods** - How to confirm findings and avoid false positives
 5. **Submit via PR** with clear description

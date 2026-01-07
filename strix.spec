@@ -122,7 +122,7 @@ hiddenimports = [
     'strix.tools.registry',
     'strix.tools.executor',
     'strix.tools.argument_parser',
-    'strix.prompts',
+    'strix.skills',
 ]
 
 hiddenimports += collect_submodules('litellm')

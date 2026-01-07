@@ -6,7 +6,7 @@ class LLMConfig:
         self,
         model_name: str | None = None,
         enable_prompt_caching: bool = True,
-        prompt_modules: list[str] | None = None,
+        skills: list[str] | None = None,
         timeout: int | None = None,
         scan_mode: str = "deep",
     ):
@@ -16,7 +16,7 @@ class LLMConfig:
             raise ValueError("STRIX_LLM environment variable must be set and not empty")
 
         self.enable_prompt_caching = enable_prompt_caching
-        self.prompt_modules = prompt_modules or []
+        self.skills = skills or []
 
         self.timeout = timeout or int(os.getenv("LLM_TIMEOUT", "300"))
 
