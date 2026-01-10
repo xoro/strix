@@ -55,7 +55,7 @@ _LLM_API_BASE = (
 )
 _STRIX_REASONING_EFFORT = os.getenv(
     "STRIX_REASONING_EFFORT"
-)  # "none", "minimal", "medium", "high", or "xhigh"
+)  # "none", "minimal", "low", "medium", "high", or "xhigh"
 
 
 class LLMRequestFailedError(Exception):
