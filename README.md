@@ -215,7 +215,13 @@ export LLM_API_BASE="your-api-base-url"  # if using a local model, e.g. Ollama, 
 export PERPLEXITY_API_KEY="your-api-key"  # for search capabilities
 ```
 
-[OpenAI's GPT-5](https://openai.com/api/) (`openai/gpt-5`), [Anthropic's Claude Sonnet 4.5](https://claude.com/platform/api) (`anthropic/claude-sonnet-4-5`), and [Google's Gemini 3 Pro](https://cloud.google.com/vertex-ai) (`vertex_ai/gemini-3-pro-preview`) are the recommended models for best results with Strix. See the [LLM Providers documentation](https://docs.strix.ai/llm-providers/overview) for all supported providers including Vertex AI, Bedrock, Azure, and local models.
+**Recommended models for best results:**
+
+- [OpenAI GPT-5](https://openai.com/api/) — `openai/gpt-5`
+- [Anthropic Claude Sonnet 4.5](https://claude.com/platform/api) — `anthropic/claude-sonnet-4-5`
+- [Google Gemini 3 Pro Preview](https://cloud.google.com/vertex-ai) — `vertex_ai/gemini-3-pro-preview`
+
+See the [LLM Providers documentation](https://docs.strix.ai/llm-providers/overview) for all supported providers including Vertex AI, Bedrock, Azure, and local models.
 
 ## 📚 Documentation
 
