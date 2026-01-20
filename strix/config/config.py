@@ -163,6 +163,14 @@ class Config:
 
         return cls.save({"env": merged})
 
+    @classmethod
+    def override(cls, key: str, value: str) -> None:
+        """Override a configuration variable dynamically."""
+        if hasattr(cls, key):
+            setattr(cls, key, value)
+        else:
+            os.environ[key] = value
+
 
 def apply_saved_config() -> dict[str, str]:
     return Config.apply_saved()

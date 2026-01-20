@@ -5,6 +5,7 @@ Strix Agent Interface
 
 import argparse
 import asyncio
+import json
 import logging
 import shutil
 import sys
@@ -356,6 +357,12 @@ Examples:
         ),
     )
 
+    parser.add_argument(
+        "--config",
+        type=str,
+        help="Path to the configuration file (.json)",
+    )
+
     args = parser.parse_args()
 
     if args.instruction and args.instruction_file:
@@ -500,11 +507,29 @@ def pull_docker_image() -> None:
     console.print()
 
 
+def load_config_file(config_path: str):
+    if config_path.endswith(".json"):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config_data = json.load(f)
+                for key, value in config_data.items():
+                    Config.override(key, str(value))  # Use Config class to override variables
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"Error loading JSON config file: {e}")
+            sys.exit(1)
+    else:
+        print("Unsupported config file format. Use .json.")
+        sys.exit(1)
+
+
 def main() -> None:
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     args = parse_arguments()
+
+    if args.config:
+        load_config_file(args.config)
 
     check_docker_installed()
     pull_docker_image()
