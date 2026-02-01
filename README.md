@@ -14,7 +14,7 @@
 
 
 <a href="https://docs.strix.ai"><img src="https://img.shields.io/badge/Docs-docs.strix.ai-2b9246?style=for-the-badge&logo=gitbook&logoColor=white" alt="Docs"></a>
-<a href="https://strix.ai"><img src="https://img.shields.io/badge/Website-strix.ai-ffffff?style=for-the-badge&logoColor=000000" alt="Website"></a>
+<a href="https://strix.ai"><img src="https://img.shields.io/badge/Website-strix.ai-f0f0f0?style=for-the-badge&logoColor=000000" alt="Website"></a>
 [![](https://dcbadge.limes.pink/api/server/8Suzzd9z)](https://discord.gg/strix-ai)
 
 <a href="https://deepwiki.com/usestrix/strix"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
@@ -61,7 +61,7 @@ Strix are autonomous AI agents that act just like real hackers - they run your c
 </div>
 
 
-## 🎯 Use Cases
+## Use Cases
 
 - **Application Security Testing** - Detect and validate critical vulnerabilities in your applications
 - **Rapid Penetration Testing** - Get penetration tests done in hours, not weeks, with compliance reports
@@ -93,19 +93,6 @@ strix --target ./app-directory
 
 > [!NOTE]
 > First run automatically pulls the sandbox Docker image. Results are saved to `strix_runs/<run-name>`
-
-## Run Strix in Cloud
-
-Want to skip the local setup, API keys, and unpredictable LLM costs? Run the hosted cloud version of Strix at **[app.strix.ai](https://strix.ai)**.
-
-Launch a scan in just a few minutes—no setup or configuration required—and you’ll get:
-
-- **A full pentest report** with validated findings and clear remediation steps
-- **Shareable dashboards** your team can use to track fixes over time
-- **CI/CD and GitHub integrations** to block risky changes before production
-- **Continuous monitoring** so new vulnerabilities are caught quickly
-
-[**Run your first pentest now →**](https://strix.ai)
 
 ---
 
