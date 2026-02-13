@@ -12,8 +12,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-import docker
-from docker.errors import DockerException, ImageNotFound
+from strix.config import Config
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -731,18 +730,34 @@ def clone_repository(repo_url: str, run_name: str, dest_name: str | None = None)
         sys.exit(1)
 
 
-# Docker utilities
-def check_docker_connection() -> Any:
+def get_host_gateway_hostname() -> str:
+    backend = Config.get("strix_runtime_backend") or "docker"
+    if backend == "podman":
+        return "host.containers.internal"
+    return "host.docker.internal"
+
+
+def check_container_connection() -> Any:
+    backend = Config.get("strix_runtime_backend") or "docker"
+    console = Console()
+
     try:
+        if backend == "podman":
+            from podman import PodmanClient  # type: ignore[import-untyped]
+
+            return PodmanClient(base_url=_detect_podman_socket())
+        import docker  # type: ignore[import-untyped]
+
         return docker.from_env()
-    except DockerException:
-        console = Console()
+    except Exception:  # noqa: BLE001
+        runtime_name = backend.capitalize()
         error_text = Text()
-        error_text.append("DOCKER NOT AVAILABLE", style="bold red")
+        error_text.append(f"{runtime_name.upper()} NOT AVAILABLE", style="bold red")
         error_text.append("\n\n", style="white")
-        error_text.append("Cannot connect to Docker daemon.\n", style="white")
+        error_text.append(f"Cannot connect to {runtime_name} daemon.\n", style="white")
         error_text.append(
-            "Please ensure Docker Desktop is installed and running, and try running strix again.\n",
+            f"Please ensure {runtime_name} is installed and running, "
+            "and try running strix again.\n",
             style="white",
         )
 
@@ -754,13 +769,30 @@ def check_docker_connection() -> Any:
             padding=(1, 2),
         )
         console.print("\n", panel, "\n")
-        raise RuntimeError("Docker not available") from None
+        raise RuntimeError(f"{runtime_name} not available") from None
 
 
-def image_exists(client: Any, image_name: str) -> bool:
+def _detect_podman_socket() -> str:
+    import os as _os
+
+    uid = _os.getuid()
+    candidates = [
+        f"unix:///run/user/{uid}/podman/podman.sock",
+        f"unix:///tmp/podman-run-{uid}/podman/podman.sock",
+        "unix:///run/podman/podman.sock",
+        "unix:///var/run/podman/podman.sock",
+    ]
+    for candidate in candidates:
+        sock_path = candidate.replace("unix://", "")
+        if Path(sock_path).exists():
+            return candidate
+    return candidates[0]
+
+
+def container_image_exists(client: Any, image_name: str) -> bool:
     try:
         client.images.get(image_name)
-    except ImageNotFound:
+    except Exception:  # noqa: BLE001
         return False
     else:
         return True

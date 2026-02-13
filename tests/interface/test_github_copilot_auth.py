@@ -506,7 +506,7 @@ class TestMainCopilotEarlyExit:
 
         with (
             patch("strix.interface.main.authenticate_github_copilot") as mock_auth,
-            patch("strix.interface.main.check_docker_installed") as mock_docker,
+            patch("strix.interface.main.check_container_runtime_installed") as mock_docker,
             patch("strix.interface.main.validate_environment") as mock_env,
         ):
             from strix.interface.main import main

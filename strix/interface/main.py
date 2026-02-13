@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any
 
 import litellm
-from docker.errors import DockerException
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -30,18 +29,18 @@ from strix.interface.tui import run_tui  # noqa: E402
 from strix.interface.utils import (  # noqa: E402
     assign_workspace_subdirs,
     build_final_stats_text,
-    check_docker_connection,
+    check_container_connection,
     clone_repository,
     collect_local_sources,
+    container_image_exists,
     generate_run_name,
-    image_exists,
+    get_host_gateway_hostname,
     infer_target_type,
     process_pull_line,
     rewrite_localhost_targets,
     validate_config_file,
     validate_llm_response,
 )
-from strix.runtime.docker_runtime import HOST_GATEWAY_HOSTNAME  # noqa: E402
 from strix.telemetry import posthog  # noqa: E402
 from strix.telemetry.tracer import get_global_tracer  # noqa: E402
 
@@ -285,15 +284,20 @@ def validate_environment() -> None:  # noqa: PLR0912, PLR0915
         sys.exit(1)
 
 
-def check_docker_installed() -> None:
-    if shutil.which("docker") is None:
+def check_container_runtime_installed() -> None:
+    backend = Config.get("strix_runtime_backend") or "docker"
+    cli_name = "podman" if backend == "podman" else "docker"
+
+    if shutil.which(cli_name) is None:
         console = Console()
         error_text = Text()
-        error_text.append("DOCKER NOT INSTALLED", style="bold red")
+        error_text.append(f"{cli_name.upper()} NOT INSTALLED", style="bold red")
         error_text.append("\n\n", style="white")
-        error_text.append("The 'docker' CLI was not found in your PATH.\n", style="white")
+        error_text.append(f"The '{cli_name}' CLI was not found in your PATH.\n", style="white")
         error_text.append(
-            "Please install Docker and ensure the 'docker' command is available.\n\n", style="white"
+            f"Please install {cli_name.capitalize()} and ensure the '{cli_name}' command "
+            "is available.\n\n",
+            style="white",
         )
 
         panel = Panel(
@@ -556,7 +560,8 @@ Examples:
             parser.error(f"Invalid target '{target}'")
 
     assign_workspace_subdirs(args.targets_info)
-    rewrite_localhost_targets(args.targets_info, HOST_GATEWAY_HOSTNAME)
+    host_gateway = get_host_gateway_hostname()
+    rewrite_localhost_targets(args.targets_info, host_gateway)
 
     return args
 
@@ -622,32 +627,36 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
     console.print()
 
 
-def pull_docker_image() -> None:
+def pull_container_image() -> None:
     console = Console()
-    client = check_docker_connection()
+    backend = Config.get("strix_runtime_backend") or "docker"
+    image_name = Config.get("strix_image")
 
-    if image_exists(client, Config.get("strix_image")):  # type: ignore[arg-type]
+    if not image_name:
+        return
+
+    client = check_container_connection()
+
+    if container_image_exists(client, image_name):
         return
 
     console.print()
-    console.print(f"[dim]Pulling image[/] {Config.get('strix_image')}")
+    console.print(f"[dim]Pulling image[/] {image_name}")
     console.print("[dim yellow]This only happens on first run and may take a few minutes...[/]")
     console.print()
 
     with console.status("[bold cyan]Downloading image layers...", spinner="dots") as status:
         try:
-            layers_info: dict[str, str] = {}
-            last_update = ""
-
-            for line in client.api.pull(Config.get("strix_image"), stream=True, decode=True):
-                last_update = process_pull_line(line, layers_info, status, last_update)
-
-        except DockerException as e:
+            if backend == "podman":
+                _pull_with_podman(client, image_name, status)
+            else:
+                _pull_with_docker(client, image_name, status)
+        except Exception as e:  # noqa: BLE001
             console.print()
             error_text = Text()
             error_text.append("FAILED TO PULL IMAGE", style="bold red")
             error_text.append("\n\n", style="white")
-            error_text.append(f"Could not download: {Config.get('strix_image')}\n", style="white")
+            error_text.append(f"Could not download: {image_name}\n", style="white")
             error_text.append(str(e), style="dim red")
 
             panel = Panel(
@@ -661,9 +670,32 @@ def pull_docker_image() -> None:
             sys.exit(1)
 
     success_text = Text()
-    success_text.append("Docker image ready", style="#22c55e")
+    success_text.append("Container image ready", style="#22c55e")
     console.print(success_text)
     console.print()
+
+
+def _pull_with_docker(client: Any, image_name: str, status: Any) -> None:
+    layers_info: dict[str, str] = {}
+    last_update = ""
+
+    for line in client.api.pull(image_name, stream=True, decode=True):
+        last_update = process_pull_line(line, layers_info, status, last_update)
+
+
+def _pull_with_podman(client: Any, image_name: str, status: Any) -> None:
+    import subprocess
+
+    podman_bin = shutil.which("podman") or "podman"
+    status.update("[bold cyan]Pulling image via podman CLI...")
+
+    result = subprocess.run(  # noqa: S603
+        [podman_bin, "pull", "--platform", "linux/amd64", image_name],  # noqa: S607
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"podman pull failed: {result.stderr.strip()}")
 
 
 def apply_config_override(config_path: str) -> None:
@@ -689,8 +721,8 @@ def main() -> None:  # noqa: PLR0912
     if args.config:
         apply_config_override(args.config)
 
-    check_docker_installed()
-    pull_docker_image()
+    check_container_runtime_installed()
+    pull_container_image()
 
     validate_environment()
     asyncio.run(warm_up_llm())
