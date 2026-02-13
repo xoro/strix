@@ -4,6 +4,7 @@ from typing import Any
 import litellm
 
 from strix.config import Config
+from strix.llm.copilot import maybe_copilot_headers
 
 
 logger = logging.getLogger(__name__)
@@ -122,6 +123,8 @@ def _summarize_messages(
             completion_args["api_key"] = api_key
         if api_base:
             completion_args["api_base"] = api_base
+
+        completion_args.update(maybe_copilot_headers(model))
 
         response = litellm.completion(**completion_args)
         summary = response.choices[0].message.content or ""

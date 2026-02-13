@@ -1,0 +1,66 @@
+---
+title: "GitHub Copilot"
+description: "Use Strix with your GitHub Copilot license"
+---
+
+## Setup
+
+### Step 1: Authenticate
+
+Run the one-time authentication command to link your GitHub Copilot account:
+
+```bash
+strix --auth-github-copilot
+```
+
+This opens a GitHub OAuth device flow in your browser. After approving, a token is cached locally at `~/.config/litellm/github_copilot/access-token`.
+
+### Step 2: Run a scan
+
+```bash
+export STRIX_LLM="github_copilot/gpt-4o"
+strix --target https://example.com
+```
+
+No `LLM_API_KEY` is needed — Strix uses the cached OAuth token automatically.
+
+## Available Models
+
+Any model available through your Copilot license can be used with the `github_copilot/` prefix.
+
+| Model | Description |
+|-------|-------------|
+| `github_copilot/gpt-4o` | GPT-4o via Copilot |
+| `github_copilot/claude-opus-4.6` | Claude Opus 4.6 via Copilot |
+| `github_copilot/claude-sonnet-4.5` | Claude 4.5 Sonnet via Copilot |
+| `github_copilot/o1-mini` | o1-mini via Copilot |
+| `github_copilot/o3-mini` | o3-mini via Copilot |
+
+<Note>
+  Available models depend on your Copilot license tier (Individual, Business, or Enterprise).
+</Note>
+
+## Prerequisites
+
+- A GitHub account with an active **Copilot Individual**, **Business**, or **Enterprise** subscription
+- Network access to `github.com` and `api.github.com` from the machine running Strix
+
+## Re-authentication
+
+Tokens expire periodically. If a scan fails with an authentication error, re-run:
+
+```bash
+strix --auth-github-copilot
+```
+
+Strix will detect the expired token and prompt you to re-authenticate.
+
+## Environment Variables
+
+These are optional overrides for advanced use cases:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GITHUB_COPILOT_TOKEN_DIR` | `~/.config/litellm/github_copilot` | Directory where tokens are stored |
+| `GITHUB_COPILOT_ACCESS_TOKEN_FILE` | `access-token` | Filename for the access token |
+| `GITHUB_COPILOT_API_KEY_FILE` | `api-key.json` | Filename for the API key |

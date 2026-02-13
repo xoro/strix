@@ -6,6 +6,7 @@ from typing import Any
 import litellm
 
 from strix.config import Config
+from strix.llm.copilot import maybe_copilot_headers
 
 
 logger = logging.getLogger(__name__)
@@ -185,6 +186,8 @@ def check_duplicate(
             completion_kwargs["api_key"] = api_key
         if api_base:
             completion_kwargs["api_base"] = api_base
+
+        completion_kwargs.update(maybe_copilot_headers(model_name))
 
         response = litellm.completion(**completion_kwargs)
 

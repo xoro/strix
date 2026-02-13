@@ -10,6 +10,7 @@ from litellm.utils import supports_prompt_caching, supports_vision
 
 from strix.config import Config
 from strix.llm.config import LLMConfig
+from strix.llm.copilot import maybe_copilot_headers
 from strix.llm.memory_compressor import MemoryCompressor
 from strix.llm.utils import (
     _truncate_to_first_function,
@@ -184,6 +185,9 @@ class LLM:
         conversation_history.extend(compressed)
         messages.extend(compressed)
 
+        if self._is_copilot() and messages and messages[-1].get("role") != "user":
+            messages.append({"role": "user", "content": "Continue."})
+
         if self._is_anthropic() and self.config.enable_prompt_caching:
             messages = self._add_cache_control(messages)
 
@@ -211,6 +215,8 @@ class LLM:
             args["api_base"] = api_base
         if self._supports_reasoning():
             args["reasoning_effort"] = self._reasoning_effort
+
+        args.update(maybe_copilot_headers(self.config.model_name))
 
         return args
 
@@ -277,6 +283,11 @@ class LLM:
         if not self.config.model_name:
             return False
         return any(p in self.config.model_name.lower() for p in ["anthropic/", "claude"])
+
+    def _is_copilot(self) -> bool:
+        if not self.config.model_name:
+            return False
+        return self.config.model_name.lower().startswith("github_copilot/")
 
     def _supports_vision(self) -> bool:
         try:
