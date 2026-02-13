@@ -15,10 +15,22 @@ strix --auth-github-copilot
 
 This opens a GitHub OAuth device flow in your browser. After approving, a token is cached locally at `~/.config/litellm/github_copilot/access-token`.
 
-### Step 2: Run a scan
+### Step 2: Set your model
 
 ```bash
 export STRIX_LLM="github_copilot/gpt-4o"
+```
+
+To make this permanent, add it to your shell profile:
+
+```bash
+echo 'export STRIX_LLM="github_copilot/gpt-4o"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Step 3: Run a scan
+
+```bash
 strix --target https://example.com
 ```
 
