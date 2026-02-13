@@ -10,6 +10,7 @@ import logging
 import os
 import shutil
 import sys
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -56,7 +57,7 @@ def _is_github_copilot_model(model_name: str | None = None) -> bool:
 def _get_github_copilot_token_path() -> Path:
     token_dir = os.getenv(
         "GITHUB_COPILOT_TOKEN_DIR",
-        os.path.expanduser("~/.config/litellm/github_copilot"),
+        str(Path.home() / ".config/litellm/github_copilot"),
     )
     return Path(token_dir) / os.getenv("GITHUB_COPILOT_ACCESS_TOKEN_FILE", "access-token")
 
@@ -143,14 +144,14 @@ def authenticate_github_copilot() -> None:
                     api_key_info = json.load(f)
                     expires_at = api_key_info.get("expires_at", 0)
                     if expires_at:
-                        from datetime import datetime, timezone
+                        from datetime import datetime
 
-                        exp_time = datetime.fromtimestamp(expires_at, tz=timezone.utc)
+                        exp_time = datetime.fromtimestamp(expires_at, tz=UTC)
                         exp_str = exp_time.strftime("%Y-%m-%d %H:%M:%S UTC")
                         console.print(f"[dim]API key valid until: {exp_str}[/]")
                         console.print()
     except Exception:  # noqa: BLE001
-        pass
+        logging.getLogger(__name__).debug("Failed to display API key info", exc_info=True)
 
 
 def validate_environment() -> None:  # noqa: PLR0912, PLR0915
@@ -313,15 +314,9 @@ async def warm_up_llm() -> None:
         error_text = Text()
         error_text.append("GITHUB COPILOT NOT AUTHENTICATED", style="bold red")
         error_text.append("\n\n", style="white")
-        error_text.append(
-            "No cached GitHub Copilot token found.\n", style="white"
-        )
-        error_text.append(
-            "Run the following command to authenticate:\n\n", style="white"
-        )
-        error_text.append(
-            "  strix --auth-github-copilot", style="bold cyan"
-        )
+        error_text.append("No cached GitHub Copilot token found.\n", style="white")
+        error_text.append("Run the following command to authenticate:\n\n", style="white")
+        error_text.append("  strix --auth-github-copilot", style="bold cyan")
 
         panel = Panel(
             error_text,
@@ -681,7 +676,7 @@ def persist_config() -> None:
         save_current_config()
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0912
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 

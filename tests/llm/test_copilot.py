@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
@@ -12,6 +13,10 @@ from strix.llm.copilot import (
     get_copilot_extra_headers,
     maybe_copilot_headers,
 )
+
+
+if TYPE_CHECKING:
+    from strix.llm.llm import LLM
 
 
 # ---------------------------------------------------------------------------
@@ -99,6 +104,7 @@ class TestConfigureCopilotLitellm:
         """Verify that importing strix.llm triggers configure_copilot_litellm."""
         with patch("strix.llm.copilot.configure_copilot_litellm") as mock_configure:
             import importlib
+
             import strix.llm
 
             importlib.reload(strix.llm)
@@ -221,20 +227,34 @@ class TestDedupePassesCopilotHeaders:
 
         mock_config_get.side_effect = config_side_effect
 
-        mock_response = type("Resp", (), {
-            "choices": [type("Choice", (), {
-                "message": type("Msg", (), {
-                    "content": (
-                        "<dedupe_result>"
-                        "<is_duplicate>false</is_duplicate>"
-                        "<duplicate_id></duplicate_id>"
-                        "<confidence>0.9</confidence>"
-                        "<reason>Different</reason>"
-                        "</dedupe_result>"
-                    )
-                })()
-            })()]
-        })()
+        mock_response = type(
+            "Resp",
+            (),
+            {
+                "choices": [
+                    type(
+                        "Choice",
+                        (),
+                        {
+                            "message": type(
+                                "Msg",
+                                (),
+                                {
+                                    "content": (
+                                        "<dedupe_result>"
+                                        "<is_duplicate>false</is_duplicate>"
+                                        "<duplicate_id></duplicate_id>"
+                                        "<confidence>0.9</confidence>"
+                                        "<reason>Different</reason>"
+                                        "</dedupe_result>"
+                                    )
+                                },
+                            )()
+                        },
+                    )()
+                ]
+            },
+        )()
         mock_completion.return_value = mock_response
 
         from strix.llm.dedupe import check_duplicate
@@ -268,11 +288,19 @@ class TestMemoryCompressorPassesCopilotHeaders:
 
         mock_config_get.side_effect = config_side_effect
 
-        mock_response = type("Resp", (), {
-            "choices": [type("Choice", (), {
-                "message": type("Msg", (), {"content": "Summary of messages"})()
-            })()]
-        })()
+        mock_response = type(
+            "Resp",
+            (),
+            {
+                "choices": [
+                    type(
+                        "Choice",
+                        (),
+                        {"message": type("Msg", (), {"content": "Summary of messages"})()},
+                    )()
+                ]
+            },
+        )()
         mock_completion.return_value = mock_response
 
         from strix.llm.memory_compressor import _summarize_messages
@@ -329,7 +357,7 @@ class TestPrepareMessagesCopilotFix:
     """Verify _prepare_messages appends a user 'Continue.' for Copilot
     when the conversation ends with an assistant message."""
 
-    def _make_llm(self, model_name: str) -> "LLM":
+    def _make_llm(self, model_name: str) -> LLM:
         from strix.llm.config import LLMConfig
         from strix.llm.llm import LLM
 

@@ -18,6 +18,7 @@ from uuid import uuid4
 
 from strix.config import Config
 
+
 _COPILOT_VERSION = "0.26.7"
 
 

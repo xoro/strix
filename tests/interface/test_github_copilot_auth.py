@@ -124,9 +124,7 @@ class TestGetGithubCopilotTokenPath:
 class TestHasGithubCopilotToken:
     """Tests for the _has_github_copilot_token helper."""
 
-    def test_no_file_returns_false(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_no_file_returns_false(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """Missing token file should return False."""
         monkeypatch.setenv("GITHUB_COPILOT_TOKEN_DIR", str(tmp_path))
         monkeypatch.setenv("GITHUB_COPILOT_ACCESS_TOKEN_FILE", "access-token")
@@ -162,9 +160,7 @@ class TestHasGithubCopilotToken:
         monkeypatch.setenv("GITHUB_COPILOT_ACCESS_TOKEN_FILE", "access-token")
         assert _has_github_copilot_token() is True
 
-    def test_os_error_returns_false(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_os_error_returns_false(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """OSError when reading token file should return False."""
         token_dir = tmp_path / "access-token"
         token_dir.mkdir()
@@ -181,9 +177,7 @@ class TestHasGithubCopilotToken:
 class TestAuthenticateGithubCopilot:
     """Tests for the authenticate_github_copilot function."""
 
-    def test_success_path(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_success_path(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """Successful auth should not call sys.exit."""
         monkeypatch.setenv("GITHUB_COPILOT_TOKEN_DIR", str(tmp_path))
         monkeypatch.setenv("GITHUB_COPILOT_ACCESS_TOKEN_FILE", "access-token")
@@ -202,9 +196,7 @@ class TestAuthenticateGithubCopilot:
 
         mock_auth.get_access_token.assert_called_once()
 
-    def test_auth_failure_exits(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_auth_failure_exits(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """Auth failure should sys.exit(1)."""
         monkeypatch.setenv("GITHUB_COPILOT_TOKEN_DIR", str(tmp_path))
         monkeypatch.setenv("GITHUB_COPILOT_ACCESS_TOKEN_FILE", "access-token")
@@ -228,7 +220,7 @@ class TestAuthenticateGithubCopilot:
             authenticate_github_copilot()
 
     def test_existing_token_shows_re_auth_message(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """When a token already exists, should mention re-authenticating."""
         token_file = tmp_path / "access-token"
@@ -248,9 +240,7 @@ class TestAuthenticateGithubCopilot:
         ):
             authenticate_github_copilot()
 
-    def test_api_key_expiry_display(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
+    def test_api_key_expiry_display(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """When api-key.json exists with expires_at, should not crash."""
         token_file = tmp_path / "access-token"
         token_file.write_text("")
@@ -258,11 +248,15 @@ class TestAuthenticateGithubCopilot:
         monkeypatch.setenv("GITHUB_COPILOT_ACCESS_TOKEN_FILE", "access-token")
 
         api_key_file = tmp_path / "api-key.json"
-        api_key_file.write_text(json.dumps({
-            "token": "sk-copilot-key",
-            "expires_at": 1893456000,
-            "endpoints": {},
-        }))
+        api_key_file.write_text(
+            json.dumps(
+                {
+                    "token": "sk-copilot-key",
+                    "expires_at": 1893456000,
+                    "endpoints": {},
+                }
+            )
+        )
 
         mock_auth = MagicMock()
         mock_auth.get_access_token.return_value = "gho_token123"
@@ -315,9 +309,7 @@ class TestParseArgumentsCopilot:
         assert args.auth_github_copilot is True
         assert args.target is None
 
-    def test_target_still_required_without_auth_flag(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_target_still_required_without_auth_flag(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Without --auth-github-copilot, --target should still be required."""
         monkeypatch.setattr(sys, "argv", ["strix"])
         from strix.interface.main import parse_arguments
@@ -342,9 +334,7 @@ class TestParseArgumentsCopilot:
 class TestValidateEnvironmentCopilot:
     """Tests for Copilot-specific behaviour in validate_environment."""
 
-    def test_missing_strix_llm_exits(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_missing_strix_llm_exits(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Missing STRIX_LLM (required) should sys.exit(1)."""
         monkeypatch.delenv("STRIX_LLM", raising=False)
 
@@ -353,9 +343,7 @@ class TestValidateEnvironmentCopilot:
         with pytest.raises(SystemExit, match="1"):
             validate_environment()
 
-    def test_copilot_model_does_not_exit(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_copilot_model_does_not_exit(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Copilot model with STRIX_LLM set should not exit (optional vars are fine)."""
         monkeypatch.setenv("STRIX_LLM", "github_copilot/gpt-4o")
         monkeypatch.delenv("LLM_API_KEY", raising=False)
@@ -364,9 +352,7 @@ class TestValidateEnvironmentCopilot:
 
         validate_environment()
 
-    def test_copilot_model_skips_api_key_collection(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_copilot_model_skips_api_key_collection(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """When using a Copilot model, LLM_API_KEY should not appear in optional warnings."""
         monkeypatch.setenv("STRIX_LLM", "github_copilot/gpt-4o")
         monkeypatch.delenv("LLM_API_KEY", raising=False)
@@ -374,9 +360,10 @@ class TestValidateEnvironmentCopilot:
 
         from strix.interface.main import validate_environment
 
-        with patch(
-            "strix.interface.main._is_github_copilot_model", return_value=True
-        ), patch("strix.interface.main.Config") as mock_config:
+        with (
+            patch("strix.interface.main._is_github_copilot_model", return_value=True),
+            patch("strix.interface.main.Config") as mock_config,
+        ):
             mock_config.get.side_effect = lambda name: {
                 "strix_llm": None,
             }.get(name)
@@ -393,9 +380,10 @@ class TestValidateEnvironmentCopilot:
 
         from strix.interface.main import validate_environment
 
-        with patch(
-            "strix.interface.main._is_github_copilot_model", return_value=False
-        ), patch("strix.interface.main.Config") as mock_config:
+        with (
+            patch("strix.interface.main._is_github_copilot_model", return_value=False),
+            patch("strix.interface.main.Config") as mock_config,
+        ):
             mock_config.get.side_effect = lambda name: {
                 "strix_llm": None,
                 "llm_api_key": None,
@@ -496,12 +484,10 @@ class TestWarmUpLlmCopilot:
 
         from strix.interface.main import warm_up_llm
 
-        with (
-            patch("strix.interface.main.litellm") as mock_litellm,
-            pytest.raises(SystemExit, match="1"),
-        ):
+        with patch("strix.interface.main.litellm") as mock_litellm:
             mock_litellm.completion.side_effect = RuntimeError("Connection refused")
-            await warm_up_llm()
+            with pytest.raises(SystemExit, match="1"):
+                await warm_up_llm()
 
 
 # ---------------------------------------------------------------------------
