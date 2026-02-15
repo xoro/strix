@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Any
 
 import litellm
@@ -12,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 MAX_TOTAL_TOKENS = 100_000
 MIN_RECENT_MESSAGES = 15
+SUMMARIZE_MAX_RETRIES = 3
+SUMMARIZE_INITIAL_BACKOFF = 2.0
 
 SUMMARY_PROMPT_TEMPLATE = """You are an agent performing context
 condensation for a security agent. Your job is to compress scan data while preserving
@@ -87,7 +90,7 @@ def _extract_message_text(msg: dict[str, Any]) -> str:
 def _summarize_messages(
     messages: list[dict[str, Any]],
     model: str,
-    timeout: int = 30,
+    timeout: int = 120,
 ) -> dict[str, Any]:
     if not messages:
         empty_summary = "<context_summary message_count='0'>{text}</context_summary>"
@@ -113,31 +116,52 @@ def _summarize_messages(
         or Config.get("ollama_api_base")
     )
 
-    try:
-        completion_args: dict[str, Any] = {
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "timeout": timeout,
-        }
-        if api_key:
-            completion_args["api_key"] = api_key
-        if api_base:
-            completion_args["api_base"] = api_base
+    completion_args: dict[str, Any] = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "timeout": timeout,
+    }
+    if api_key:
+        completion_args["api_key"] = api_key
+    if api_base:
+        completion_args["api_base"] = api_base
 
-        completion_args.update(maybe_copilot_headers(model))
+    completion_args.update(maybe_copilot_headers(model))
 
-        response = litellm.completion(**completion_args)
-        summary = response.choices[0].message.content or ""
-        if not summary.strip():
+    last_exception: Exception | None = None
+    for attempt in range(1, SUMMARIZE_MAX_RETRIES + 1):
+        try:
+            response = litellm.completion(**completion_args)
+            summary = response.choices[0].message.content or ""
+            if not summary.strip():
+                return messages[0]
+            summary_msg = "<context_summary message_count='{count}'>{text}</context_summary>"
+            return {
+                "role": "assistant",
+                "content": summary_msg.format(count=len(messages), text=summary),
+            }
+        except (litellm.exceptions.Timeout, litellm.exceptions.APIConnectionError) as exc:
+            last_exception = exc
+            if attempt < SUMMARIZE_MAX_RETRIES:
+                backoff = SUMMARIZE_INITIAL_BACKOFF * (2 ** (attempt - 1))
+                logger.warning(
+                    "Summarization attempt %d/%d timed out, retrying in %.1fs",
+                    attempt,
+                    SUMMARIZE_MAX_RETRIES,
+                    backoff,
+                )
+                time.sleep(backoff)
+            else:
+                logger.warning(
+                    "Summarization failed after %d attempts: %s",
+                    SUMMARIZE_MAX_RETRIES,
+                    last_exception,
+                )
+        except Exception:
+            logger.exception("Failed to summarize messages")
             return messages[0]
-        summary_msg = "<context_summary message_count='{count}'>{text}</context_summary>"
-        return {
-            "role": "assistant",
-            "content": summary_msg.format(count=len(messages), text=summary),
-        }
-    except Exception:
-        logger.exception("Failed to summarize messages")
-        return messages[0]
+
+    return messages[0]
 
 
 def _handle_images(messages: list[dict[str, Any]], max_images: int) -> None:
@@ -167,7 +191,7 @@ class MemoryCompressor:
     ):
         self.max_images = max_images
         self.model_name = model_name or Config.get("strix_llm")
-        self.timeout = timeout or int(Config.get("strix_memory_compressor_timeout") or "30")
+        self.timeout = timeout or int(Config.get("strix_memory_compressor_timeout") or "120")
 
         if not self.model_name:
             raise ValueError("STRIX_LLM environment variable must be set and not empty")
