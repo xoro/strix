@@ -231,6 +231,81 @@ Strix executes security tools inside a sandboxed container (Kali Linux). By defa
 
 No extra configuration needed. Strix uses Docker by default if it is installed and the Docker daemon is running.
 
+### Windows (WSL2 + Docker)
+
+Strix runs on Windows via **WSL2** (Windows Subsystem for Linux). This gives you a full Linux environment with Docker support.
+
+**1. Enable WSL2**
+
+Open **PowerShell as Administrator** and run:
+
+```powershell
+wsl --install
+```
+
+This installs WSL2 with Ubuntu by default. Restart your computer when prompted.
+
+> [!NOTE]
+> If WSL is already installed, ensure you're on WSL2: `wsl --set-default-version 2`
+
+**2. Install Docker inside WSL2**
+
+Open your WSL2 terminal (e.g., Ubuntu) and install Docker:
+
+```bash
+# Update packages
+sudo apt update && sudo apt upgrade -y
+
+# Install Docker
+sudo apt install -y docker.io
+
+# Start Docker
+sudo service docker start
+
+# Add your user to the docker group (avoids needing sudo)
+sudo usermod -aG docker $USER
+
+# Apply group changes (or log out and back in)
+newgrp docker
+
+# Verify Docker is working
+docker info
+```
+
+> [!TIP]
+> To start Docker automatically when WSL2 launches, add `sudo service docker start` to your `~/.bashrc` or use systemd if your distro supports it (`sudo systemctl enable docker`).
+
+**3. Install Strix**
+
+```bash
+# Install Strix
+curl -sSL https://strix.ai/install | bash
+
+# Or via pipx
+pipx install strix-agent
+
+# Configure your AI provider
+export STRIX_LLM="openai/gpt-5"
+export LLM_API_KEY="your-api-key"
+
+# Run a scan
+strix --target ./your-project
+```
+
+**4. (Alternative) Docker Desktop**
+
+If you prefer a GUI, you can install [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/) with WSL2 backend integration instead of installing Docker inside WSL2. Enable **Settings → Resources → WSL Integration** for your distro.
+
+#### Windows Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `wsl --install` fails | Enable "Virtual Machine Platform" in Windows Features, or update Windows to build 19041+ |
+| Docker daemon not running | Run `sudo service docker start` inside WSL2 |
+| `permission denied` on Docker socket | Add user to docker group: `sudo usermod -aG docker $USER` then restart terminal |
+| `Cannot connect to Docker daemon` in Strix | Verify `docker info` works first; if using Docker Desktop, enable WSL2 integration |
+| Slow file I/O on `/mnt/c/` paths | Store projects inside the WSL2 filesystem (`~/projects/`) for better performance |
+
 ### Podman
 
 To use Podman instead of Docker, set the runtime backend:
