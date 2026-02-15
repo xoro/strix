@@ -221,6 +221,137 @@ export STRIX_REASONING_EFFORT="high"  # control thinking effort (default: high, 
 
 See the [LLM Providers documentation](https://docs.strix.ai/llm-providers/overview) for all supported providers including Vertex AI, Bedrock, Azure, and local models.
 
+---
+
+## 🐳 Container Runtimes
+
+Strix executes security tools inside a sandboxed container (Kali Linux). By default it uses **Docker**, but **Podman** is also supported as an alternative backend — including on **FreeBSD**.
+
+### Docker (Default)
+
+No extra configuration needed. Strix uses Docker by default if it is installed and the Docker daemon is running.
+
+### Podman
+
+To use Podman instead of Docker, set the runtime backend:
+
+```bash
+export STRIX_RUNTIME_BACKEND="podman"
+```
+
+Or add it to your `~/.strix/cli-config.json`:
+
+```json
+{
+  "strix_runtime_backend": "podman"
+}
+```
+
+#### Podman Setup (Linux)
+
+```bash
+# Install Podman
+sudo apt install podman        # Debian/Ubuntu
+sudo dnf install podman        # Fedora/RHEL
+
+# Start the Podman socket (required for the Podman SDK)
+podman system service --time=0 &
+
+# Or enable it as a systemd user service (persistent)
+systemctl --user enable --now podman.socket
+
+# Pull the sandbox image
+podman pull ghcr.io/usestrix/strix-sandbox:0.1.11
+
+# Install the Podman Python SDK
+pip install podman
+```
+
+#### Podman Setup (FreeBSD)
+
+Strix has full FreeBSD support via Podman with automatic workarounds for platform-specific differences (container networking, entrypoint compatibility, SDK limitations).
+
+**1. Install Podman and dependencies**
+
+```bash
+# Install Podman and the OCI runtime
+pkg install podman buildah
+
+# Enable and start the Podman service
+sysrc podman_enable=YES
+service podman start
+```
+
+**2. Configure container networking**
+
+FreeBSD uses a different networking stack than Linux. Podman containers communicate via direct container IP addresses (the `vnet` bridge) rather than host port forwarding.
+
+```bash
+# Verify the default CNI/netavark network is working
+podman network ls
+
+# Test container networking
+podman run --rm alpine ping -c1 1.1.1.1
+```
+
+**3. Pull the sandbox image and install Python dependencies**
+
+```bash
+# Pull the sandbox image (linux/amd64 — runs via QEMU emulation on FreeBSD)
+podman pull --arch amd64 ghcr.io/usestrix/strix-sandbox:0.1.11
+
+# Install the Podman Python SDK
+pip install podman
+```
+
+**4. Start the Podman socket**
+
+```bash
+# Start the socket for the current session
+podman system service --time=0 &
+
+# Verify the socket is accessible
+podman info --format '{{.Host.RemoteSocket.Path}}'
+```
+
+Strix auto-detects the socket at common locations (`/var/run/podman/podman.sock`, `/run/podman/podman.sock`, etc.). To specify a custom location:
+
+```bash
+export CONTAINER_HOST="unix:///path/to/podman.sock"
+```
+
+**5. Configure and run**
+
+```bash
+export STRIX_RUNTIME_BACKEND="podman"
+export STRIX_LLM="your-provider/your-model"
+export LLM_API_KEY="your-api-key"
+
+# Run a scan
+strix --target ./your-project
+```
+
+#### FreeBSD-Specific Notes
+
+- **Container IP networking**: Strix automatically uses direct container IP addresses on FreeBSD instead of host port forwarding, which is unreliable on the platform.
+- **Entrypoint compatibility**: The Kali sandbox entrypoint uses `sudo`, which is not available in FreeBSD's Podman environment. Strix automatically patches the entrypoint at container startup.
+- **CLI fallbacks**: Some Podman SDK operations (`put_archive`, `exec_run`, `container.start()`) are unreliable on FreeBSD. Strix transparently falls back to `podman` CLI subprocess calls for these operations.
+- **QEMU emulation**: The sandbox image is `linux/amd64`. On FreeBSD, it runs through QEMU emulation, so container startup is slower (~10s vs ~5s). This is handled automatically.
+- **Root recommended**: Running as root avoids permission issues with the Podman socket and container networking on FreeBSD.
+
+#### Troubleshooting Podman
+
+| Problem | Solution |
+|---------|----------|
+| `Podman socket not found` | Start the socket: `podman system service --time=0 &` |
+| `Podman socket not responding` | Verify Podman is running: `podman info` |
+| `Tool server failed to start` | Check container logs: `podman logs strix-scan-<id>` |
+| `Image not found` | Pull manually: `podman pull ghcr.io/usestrix/strix-sandbox:0.1.11` |
+| Container starts but tools fail | Verify networking: `podman exec <container> curl -s http://localhost:48081/health` |
+| Slow startup on FreeBSD | Expected due to QEMU emulation; Strix waits automatically |
+
+---
+
 ## Documentation
 
 Full documentation is available at **[docs.strix.ai](https://docs.strix.ai)** — including detailed guides for usage, CI/CD integrations, skills, and advanced configuration.
