@@ -47,7 +47,8 @@ class TestIsGithubCopilotModel:
         ],
     )
     def test_non_copilot_models_rejected(self, model_name: str) -> None:
-        assert _is_github_copilot_model(model_name) is False
+        with patch("strix.llm.copilot.Config.get", return_value=None):
+            assert _is_github_copilot_model(model_name) is False
 
     def test_none_falls_back_to_config(self) -> None:
         with patch("strix.llm.copilot.Config.get", return_value="github_copilot/gpt-4o"):
@@ -333,11 +334,19 @@ class TestIsCopilot:
         llm = LLM(LLMConfig(model_name="openai/gpt-4o"))
         assert llm._is_copilot() is False
 
-    def test_none_model(self) -> None:
+    def test_none_model(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from strix.llm.config import LLMConfig
         from strix.llm.llm import LLM
 
-        llm = LLM(LLMConfig(model_name=None))
+        monkeypatch.delenv("STRIX_LLM", raising=False)
+
+        def _config_get(key: str) -> str | None:
+            if key == "strix_llm":
+                return "openai/gpt-4o"
+            return None
+
+        with patch("strix.llm.config.Config.get", side_effect=_config_get):
+            llm = LLM(LLMConfig(model_name=None))
         assert llm._is_copilot() is False
 
     def test_case_insensitive(self) -> None:

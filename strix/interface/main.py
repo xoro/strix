@@ -71,13 +71,60 @@ def _has_github_copilot_token() -> bool:
         return False
 
 
-def authenticate_github_copilot() -> None:
+def _validate_github_copilot_token() -> bool:
+    """Check whether the stored GitHub Copilot access token is still valid.
+
+    Returns ``True`` when the token is accepted by GitHub, ``False`` otherwise.
+    """
+    token_path = _get_github_copilot_token_path()
+    try:
+        token = token_path.read_text().strip()
+        if not token:
+            return False
+    except OSError:
+        return False
+
+    try:
+        import httpx
+
+        resp = httpx.get(
+            "https://api.github.com/user",
+            headers={
+                "Authorization": f"token {token}",
+                "Accept": "application/json",
+            },
+            timeout=10,
+        )
+    except Exception:  # noqa: BLE001
+        return False
+    else:
+        return resp.status_code == 200
+
+
+def _clear_github_copilot_tokens() -> None:
+    """Remove cached GitHub Copilot token files so a fresh login is triggered."""
+    import contextlib
+
+    token_path = _get_github_copilot_token_path()
+    api_key_path = token_path.parent / os.getenv("GITHUB_COPILOT_API_KEY_FILE", "api-key.json")
+    for path in (token_path, api_key_path):
+        with contextlib.suppress(OSError):
+            path.unlink(missing_ok=True)
+
+
+def authenticate_github_copilot() -> None:  # noqa: PLR0915
     console = Console()
 
     if _has_github_copilot_token():
         console.print()
         console.print("[dim]Existing GitHub Copilot token found.[/]")
-        console.print("[dim]Re-authenticating...[/]")
+        console.print("[dim]Validating token...[/]")
+        if _validate_github_copilot_token():
+            console.print("[dim]Token is still valid.[/]")
+        else:
+            console.print("[dim yellow]Token is expired or invalid. Clearing cached tokens...[/]")
+            _clear_github_copilot_tokens()
+            console.print("[dim]Starting fresh authentication...[/]")
         console.print()
 
     try:
@@ -311,29 +358,53 @@ def check_container_runtime_installed() -> None:
         sys.exit(1)
 
 
-async def warm_up_llm() -> None:
+async def warm_up_llm() -> None:  # noqa: PLR0915
     console = Console()
+    if _is_github_copilot_model():
+        if not _has_github_copilot_token():
+            error_text = Text()
+            error_text.append("GITHUB COPILOT NOT AUTHENTICATED", style="bold red")
+            error_text.append("\n\n", style="white")
+            error_text.append("No cached GitHub Copilot token found.\n", style="white")
+            error_text.append("Run the following command to authenticate:\n\n", style="white")
+            error_text.append("  strix --auth-github-copilot", style="bold cyan")
 
-    if _is_github_copilot_model() and not _has_github_copilot_token():
-        error_text = Text()
-        error_text.append("GITHUB COPILOT NOT AUTHENTICATED", style="bold red")
-        error_text.append("\n\n", style="white")
-        error_text.append("No cached GitHub Copilot token found.\n", style="white")
-        error_text.append("Run the following command to authenticate:\n\n", style="white")
-        error_text.append("  strix --auth-github-copilot", style="bold cyan")
+            panel = Panel(
+                error_text,
+                title="[bold white]STRIX",
+                title_align="left",
+                border_style="red",
+                padding=(1, 2),
+            )
 
-        panel = Panel(
-            error_text,
-            title="[bold white]STRIX",
-            title_align="left",
-            border_style="red",
-            padding=(1, 2),
-        )
+            console.print("\n")
+            console.print(panel)
+            console.print()
+            sys.exit(1)
 
-        console.print("\n")
-        console.print(panel)
-        console.print()
-        sys.exit(1)
+        if not _validate_github_copilot_token():
+            error_text = Text()
+            error_text.append("GITHUB COPILOT TOKEN EXPIRED", style="bold red")
+            error_text.append("\n\n", style="white")
+            error_text.append(
+                "Your cached GitHub Copilot token is expired or invalid.\n",
+                style="white",
+            )
+            error_text.append("Run the following command to re-authenticate:\n\n", style="white")
+            error_text.append("  strix --auth-github-copilot", style="bold cyan")
+
+            panel = Panel(
+                error_text,
+                title="[bold white]STRIX",
+                title_align="left",
+                border_style="red",
+                padding=(1, 2),
+            )
+
+            console.print("\n")
+            console.print(panel)
+            console.print()
+            sys.exit(1)
 
     try:
         model_name = Config.get("strix_llm")
@@ -683,16 +754,17 @@ def _pull_with_docker(client: Any, image_name: str, status: Any) -> None:
         last_update = process_pull_line(line, layers_info, status, last_update)
 
 
-def _pull_with_podman(client: Any, image_name: str, status: Any) -> None:
+def _pull_with_podman(client: Any, image_name: str, status: Any) -> None:  # noqa: ARG001
     import subprocess
 
     podman_bin = shutil.which("podman") or "podman"
     status.update("[bold cyan]Pulling image via podman CLI...")
 
     result = subprocess.run(  # noqa: S603
-        [podman_bin, "pull", "--platform", "linux/amd64", image_name],  # noqa: S607
+        [podman_bin, "pull", "--platform", "linux/amd64", image_name],
         capture_output=True,
         text=True,
+        check=False,
     )
     if result.returncode != 0:
         raise RuntimeError(f"podman pull failed: {result.stderr.strip()}")

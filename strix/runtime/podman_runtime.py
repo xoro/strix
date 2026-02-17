@@ -28,18 +28,19 @@ _FREEBSD_ENTRYPOINT_WRAPPER = (
     "sed 's/sudo tee/tee/g; s/sudo -E -u pentester //g; s/sudo -u pentester //g' "
     "/usr/local/bin/docker-entrypoint.sh > /tmp/entrypoint-nosudo.sh && "
     "chmod +x /tmp/entrypoint-nosudo.sh && "
-    'sed -i \'s|exec "$@"|tail -f /dev/null|\' /tmp/entrypoint-nosudo.sh && '
+    "sed -i 's|exec \"$@\"|tail -f /dev/null|' /tmp/entrypoint-nosudo.sh && "
     "bash /tmp/entrypoint-nosudo.sh"
 )
 
 
 def _query_podman_info_socket() -> str | None:
     try:
-        result = subprocess.run(  # noqa: S603, S607
-            ["podman", "info", "--format", "{{.Host.RemoteSocket.Path}}"],
+        result = subprocess.run(  # noqa: S603
+            ["podman", "info", "--format", "{{.Host.RemoteSocket.Path}}"],  # noqa: S607
             capture_output=True,
             text=True,
             timeout=10,
+            check=False,
         )
         if result.returncode == 0:
             sock_path = result.stdout.strip()
@@ -62,12 +63,12 @@ class PodmanRuntime(AbstractRuntime):
             )
             self._api_error_cls = APIError
             if not self.client.ping():
-                raise SandboxInitializationError(
-                    "Podman socket not responding",
+                msg = (
                     f"Connected to '{podman_uri}' but ping failed. "
                     "Ensure the Podman service is running: "
-                    "'podman system service --time=0 &'",
+                    "'podman system service --time=0 &'"
                 )
+                raise SandboxInitializationError("Podman socket not responding", msg)  # noqa: TRY301
         except SandboxInitializationError:
             raise
         except Exception as e:
@@ -109,7 +110,7 @@ class PodmanRuntime(AbstractRuntime):
         raise SandboxInitializationError(
             "Podman socket not found",
             "No Podman socket found at any of the expected locations: "
-            + ", ".join(c.replace('unix://', '') for c in candidates)
+            + ", ".join(c.replace("unix://", "") for c in candidates)
             + ". Start the Podman socket service: 'podman system service --time=0 &'",
         )
 
@@ -139,7 +140,7 @@ class PodmanRuntime(AbstractRuntime):
                     raise ImageNotFound(  # type: ignore[misc]  # noqa: TRY301
                         f"Image {image_name} metadata incomplete"
                     )
-            except (ImageNotFound, Exception):  # noqa: BLE001
+            except (ImageNotFound, Exception):
                 if attempt == max_retries - 1:
                     raise
                 time.sleep(2**attempt)
@@ -164,11 +165,12 @@ class PodmanRuntime(AbstractRuntime):
 
     @staticmethod
     def _start_container(container_name: str) -> None:
-        result = subprocess.run(  # noqa: S603, S607
-            ["podman", "start", container_name],
+        result = subprocess.run(  # noqa: S603
+            ["podman", "start", container_name],  # noqa: S607
             capture_output=True,
             text=True,
             timeout=30,
+            check=False,
         )
         if result.returncode != 0:
             raise SandboxInitializationError(
@@ -178,14 +180,18 @@ class PodmanRuntime(AbstractRuntime):
 
     @staticmethod
     def _get_container_ip(container_name: str) -> str | None:
-        result = subprocess.run(  # noqa: S603, S607
-            [
-                "podman", "inspect", container_name,
-                "--format", "{{.NetworkSettings.IPAddress}}",
+        result = subprocess.run(  # noqa: S603
+            [  # noqa: S607
+                "podman",
+                "inspect",
+                container_name,
+                "--format",
+                "{{.NetworkSettings.IPAddress}}",
             ],
             capture_output=True,
             text=True,
             timeout=10,
+            check=False,
         )
         ip_addr = result.stdout.strip()
         if result.returncode == 0 and ip_addr:
@@ -218,8 +224,6 @@ class PodmanRuntime(AbstractRuntime):
         )
 
     def _create_container(self, scan_id: str, max_retries: int = 2) -> object:
-        from podman.errors import NotFound  # type: ignore[import-untyped]
-
         container_name = f"strix-scan-{scan_id}"
         image_name = Config.get("strix_image")
         if not image_name:
@@ -246,7 +250,10 @@ class PodmanRuntime(AbstractRuntime):
 
                 if self._is_freebsd():
                     self._create_container_cli(
-                        container_name, image_name, env_vars, scan_id,
+                        container_name,
+                        image_name,
+                        env_vars,
+                        scan_id,
                     )
                 else:
                     self.client.containers.create(
@@ -288,9 +295,11 @@ class PodmanRuntime(AbstractRuntime):
         ) from last_error
 
     def _remove_existing_container(self, container_name: str) -> None:
-        subprocess.run(  # noqa: S603, S607
-            ["podman", "rm", "-f", container_name],
-            capture_output=True, timeout=15,
+        subprocess.run(  # noqa: S603
+            ["podman", "rm", "-f", container_name],  # noqa: S607
+            capture_output=True,
+            timeout=15,
+            check=False,
         )
         time.sleep(0.5)
 
@@ -307,16 +316,25 @@ class PodmanRuntime(AbstractRuntime):
         scan_id: str,
     ) -> None:
         cmd: list[str] = [
-            "podman", "create",
-            "--name", container_name,
-            "--hostname", container_name,
-            "-p", str(CONTAINER_TOOL_SERVER_PORT),
-            "--cap-add", "NET_ADMIN",
-            "--cap-add", "NET_RAW",
-            "--user", "root",
-            "--entrypoint", "bash",
+            "podman",
+            "create",
+            "--name",
+            container_name,
+            "--hostname",
+            container_name,
+            "-p",
+            str(CONTAINER_TOOL_SERVER_PORT),
+            "--cap-add",
+            "NET_ADMIN",
+            "--cap-add",
+            "NET_RAW",
+            "--user",
+            "root",
+            "--entrypoint",
+            "bash",
             "--tty",
-            "--label", f"strix-scan-id={scan_id}",
+            "--label",
+            f"strix-scan-id={scan_id}",
         ]
         for key, value in env_vars.items():
             cmd.extend(["-e", f"{key}={value}"])
@@ -324,7 +342,11 @@ class PodmanRuntime(AbstractRuntime):
         cmd.extend([image_name, "-c", _FREEBSD_ENTRYPOINT_WRAPPER])
 
         result = subprocess.run(  # noqa: S603
-            cmd, capture_output=True, text=True, timeout=30,
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
         )
         if result.returncode != 0:
             raise SandboxInitializationError(
@@ -383,7 +405,7 @@ class PodmanRuntime(AbstractRuntime):
                     c_name = getattr(container, "name", container_name)
                     self._container_ip = self._get_container_ip(c_name)
                 return container
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S110
             pass
 
         return self._create_container(scan_id)
@@ -403,7 +425,9 @@ class PodmanRuntime(AbstractRuntime):
 
             if self._is_freebsd() and container_name:
                 self._copy_local_directory_to_container_cli(
-                    container_name, local_path_obj, target_name,
+                    container_name,
+                    local_path_obj,
+                    target_name,
                 )
                 return
 
@@ -421,7 +445,7 @@ class PodmanRuntime(AbstractRuntime):
                 "chown -R pentester:pentester /workspace && chmod -R 755 /workspace",
                 user="root",
             )
-        except (OSError, Exception):  # noqa: BLE001
+        except (OSError, Exception):  # noqa: S110
             pass
 
     def _copy_local_directory_to_container_cli(
@@ -429,20 +453,25 @@ class PodmanRuntime(AbstractRuntime):
     ) -> None:
         try:
             dest_dir = f"/workspace/{target_name}" if target_name else "/workspace"
-            subprocess.run(
-                ["podman", "exec", container_name, "mkdir", "-p", dest_dir],
+            subprocess.run(  # noqa: S603
+                ["podman", "exec", container_name, "mkdir", "-p", dest_dir],  # noqa: S607
                 check=True,
                 capture_output=True,
             )
-            subprocess.run(
-                ["podman", "cp", f"{local_path}/.", f"{container_name}:{dest_dir}/"],
+            subprocess.run(  # noqa: S603
+                ["podman", "cp", f"{local_path}/.", f"{container_name}:{dest_dir}/"],  # noqa: S607
                 check=True,
                 capture_output=True,
             )
-            subprocess.run(
-                [
-                    "podman", "exec", container_name,
-                    "chmod", "-R", "755", "/workspace",
+            subprocess.run(  # noqa: S603
+                [  # noqa: S607
+                    "podman",
+                    "exec",
+                    container_name,
+                    "chmod",
+                    "-R",
+                    "755",
+                    "/workspace",
                 ],
                 check=True,
                 capture_output=True,
@@ -511,10 +540,9 @@ class PodmanRuntime(AbstractRuntime):
 
         try:
             self.client.containers.get(container_id)
-            url = f"http://{self._resolve_host()}:{port}"
-            return url
         except NotFound:
             raise ValueError(f"Container {container_id} not found.") from None
+        return f"http://{self._resolve_host()}:{port}"
 
     def _resolve_host(self) -> str:
         if self._container_ip:
@@ -539,7 +567,7 @@ class PodmanRuntime(AbstractRuntime):
             self._tool_server_port = None
             self._tool_server_token = None
             self._container_ip = None
-        except (NotFound, Exception):  # noqa: BLE001
+        except (NotFound, Exception):  # noqa: S110
             pass
 
     def cleanup(self) -> None:

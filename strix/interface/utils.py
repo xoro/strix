@@ -12,10 +12,11 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-from strix.config import Config
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
+
+from strix.config import Config
 
 
 # Token formatting utilities

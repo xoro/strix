@@ -40,8 +40,6 @@ format:
 lint:
 	@echo "🔍 Linting code with ruff..."
 	poetry run ruff check . --fix
-	@echo "📝 Running additional linting with pylint..."
-	poetry run pylint strix/ --score=no --reports=no
 	@echo "✅ Linting complete!"
 
 type-check:

@@ -35,8 +35,7 @@ def get_runtime() -> AbstractRuntime:
         return _global_runtime
 
     raise ValueError(
-        f"Unsupported runtime backend: {runtime_backend}. "
-        "Supported backends: 'docker', 'podman'."
+        f"Unsupported runtime backend: {runtime_backend}. Supported backends: 'docker', 'podman'."
     )
 
 

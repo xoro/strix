@@ -56,11 +56,15 @@ class TestIsGithubCopilotModel:
 
     def test_none_returns_false(self) -> None:
         """None (no model configured) should return False."""
-        assert _is_github_copilot_model(None) is False
+        with patch("strix.interface.main.Config") as mock_config:
+            mock_config.get.return_value = None
+            assert _is_github_copilot_model(None) is False
 
     def test_empty_string_returns_false(self) -> None:
         """Empty string should return False."""
-        assert _is_github_copilot_model("") is False
+        with patch("strix.interface.main.Config") as mock_config:
+            mock_config.get.return_value = None
+            assert _is_github_copilot_model("") is False
 
     def test_reads_config_when_no_argument(self) -> None:
         """When called without an argument, should read from Config."""
@@ -437,7 +441,13 @@ class TestWarmUpLlmCopilot:
 
         with patch("strix.interface.main.litellm") as mock_litellm:
             mock_litellm.completion.return_value = mock_response
-            with patch("strix.interface.main.validate_llm_response"):
+            with (
+                patch("strix.interface.main.validate_llm_response"),
+                patch(
+                    "strix.interface.main._validate_github_copilot_token",
+                    return_value=True,
+                ),
+            ):
                 await warm_up_llm()
 
         mock_litellm.completion.assert_called_once()
@@ -486,7 +496,13 @@ class TestWarmUpLlmCopilot:
 
         with patch("strix.interface.main.litellm") as mock_litellm:
             mock_litellm.completion.side_effect = RuntimeError("Connection refused")
-            with pytest.raises(SystemExit, match="1"):
+            with (
+                pytest.raises(SystemExit, match="1"),
+                patch(
+                    "strix.interface.main._validate_github_copilot_token",
+                    return_value=True,
+                ),
+            ):
                 await warm_up_llm()
 
 
