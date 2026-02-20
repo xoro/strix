@@ -1,11 +1,18 @@
 import contextlib
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
 
 STRIX_API_BASE = "https://models.strix.ai/api/v1"
+
+
+def _default_runtime_backend() -> str:
+    if sys.platform.startswith("freebsd"):
+        return "podman"
+    return "docker"
 
 
 class Config:
@@ -41,7 +48,7 @@ class Config:
 
     # Runtime Configuration
     strix_image = "ghcr.io/usestrix/strix-sandbox:0.1.11"
-    strix_runtime_backend = "docker"
+    strix_runtime_backend = _default_runtime_backend()
     strix_sandbox_execution_timeout = "120"
     strix_sandbox_connect_timeout = "10"
 

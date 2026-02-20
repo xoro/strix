@@ -119,6 +119,10 @@ def _summarize_messages(
         if api_base:
             completion_args["api_base"] = api_base
 
+        from strix.llm.copilot import maybe_copilot_headers
+
+        completion_args.update(maybe_copilot_headers(model))
+
         response = litellm.completion(**completion_args)
         summary = response.choices[0].message.content or ""
         if not summary.strip():

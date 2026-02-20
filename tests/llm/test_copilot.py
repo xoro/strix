@@ -214,20 +214,8 @@ class TestBuildCompletionArgsIncludesHeaders:
 
 class TestDedupePassesCopilotHeaders:
     @patch("strix.llm.dedupe.litellm.completion")
-    @patch("strix.llm.dedupe.Config.get")
-    def test_copilot_model_sends_headers(self, mock_config_get, mock_completion) -> None:
-        def config_side_effect(key):
-            return {
-                "strix_llm": "github_copilot/gpt-4o",
-                "llm_api_key": None,
-                "llm_api_base": None,
-                "openai_api_base": None,
-                "litellm_base_url": None,
-                "ollama_api_base": None,
-            }.get(key)
-
-        mock_config_get.side_effect = config_side_effect
-
+    @patch("strix.llm.dedupe.resolve_llm_config", return_value=("github_copilot/gpt-4o", None, None))
+    def test_copilot_model_sends_headers(self, mock_resolve, mock_completion) -> None:
         mock_response = type(
             "Resp",
             (),
@@ -276,19 +264,8 @@ class TestDedupePassesCopilotHeaders:
 
 class TestMemoryCompressorPassesCopilotHeaders:
     @patch("strix.llm.memory_compressor.litellm.completion")
-    @patch("strix.llm.memory_compressor.Config.get")
-    def test_copilot_model_sends_headers(self, mock_config_get, mock_completion) -> None:
-        def config_side_effect(key):
-            return {
-                "llm_api_key": None,
-                "llm_api_base": None,
-                "openai_api_base": None,
-                "litellm_base_url": None,
-                "ollama_api_base": None,
-            }.get(key)
-
-        mock_config_get.side_effect = config_side_effect
-
+    @patch("strix.llm.memory_compressor.resolve_llm_config", return_value=(None, None, None))
+    def test_copilot_model_sends_headers(self, mock_resolve, mock_completion) -> None:
         mock_response = type(
             "Resp",
             (),

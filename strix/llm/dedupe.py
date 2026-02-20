@@ -179,6 +179,10 @@ def check_duplicate(
         if api_base:
             completion_kwargs["api_base"] = api_base
 
+        from strix.llm.copilot import maybe_copilot_headers
+
+        completion_kwargs.update(maybe_copilot_headers(model_name))
+
         response = litellm.completion(**completion_kwargs)
 
         content = response.choices[0].message.content

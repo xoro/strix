@@ -5,9 +5,12 @@ Strix Agent Interface
 
 import argparse
 import asyncio
+import json
 import logging
+import os
 import shutil
 import sys
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +49,158 @@ from strix.telemetry.tracer import get_global_tracer  # noqa: E402
 logging.getLogger().setLevel(logging.ERROR)
 
 
+def _is_github_copilot_model(model_name: str | None = None) -> bool:
+    name = model_name or Config.get("strix_llm") or ""
+    return name.lower().startswith("github_copilot/")
+
+
+def _get_github_copilot_token_path() -> Path:
+    token_dir = os.getenv(
+        "GITHUB_COPILOT_TOKEN_DIR",
+        str(Path.home() / ".config/litellm/github_copilot"),
+    )
+    return Path(token_dir) / os.getenv("GITHUB_COPILOT_ACCESS_TOKEN_FILE", "access-token")
+
+
+def _has_github_copilot_token() -> bool:
+    token_path = _get_github_copilot_token_path()
+    if not token_path.exists():
+        return False
+    try:
+        return bool(token_path.read_text().strip())
+    except OSError:
+        return False
+
+
+def _validate_github_copilot_token() -> bool:
+    """Check whether the stored GitHub Copilot access token is still valid.
+
+    Returns ``True`` when the token is accepted by GitHub, ``False`` otherwise.
+    """
+    token_path = _get_github_copilot_token_path()
+    try:
+        token = token_path.read_text().strip()
+        if not token:
+            return False
+    except OSError:
+        return False
+
+    try:
+        import httpx
+
+        resp = httpx.get(
+            "https://api.github.com/user",
+            headers={
+                "Authorization": f"token {token}",
+                "Accept": "application/json",
+            },
+            timeout=10,
+        )
+    except Exception:  # noqa: BLE001
+        return False
+    else:
+        return resp.status_code == 200
+
+
+def _clear_github_copilot_tokens() -> None:
+    """Remove cached GitHub Copilot token files so a fresh login is triggered."""
+    import contextlib
+
+    token_path = _get_github_copilot_token_path()
+    api_key_path = token_path.parent / os.getenv("GITHUB_COPILOT_API_KEY_FILE", "api-key.json")
+    for path in (token_path, api_key_path):
+        with contextlib.suppress(OSError):
+            path.unlink(missing_ok=True)
+
+
+def authenticate_github_copilot() -> None:  # noqa: PLR0915
+    console = Console()
+
+    if _has_github_copilot_token():
+        console.print()
+        console.print("[dim]Existing GitHub Copilot token found.[/]")
+        console.print("[dim]Validating token...[/]")
+        if _validate_github_copilot_token():
+            console.print("[dim]Token is still valid.[/]")
+        else:
+            console.print("[dim yellow]Token is expired or invalid. Clearing cached tokens...[/]")
+            _clear_github_copilot_tokens()
+            console.print("[dim]Starting fresh authentication...[/]")
+        console.print()
+
+    try:
+        from litellm.llms.github_copilot.authenticator import Authenticator
+
+        auth = Authenticator()
+        auth.get_access_token()
+    except Exception as e:  # noqa: BLE001
+        error_text = Text()
+        error_text.append("GITHUB COPILOT AUTHENTICATION FAILED", style="bold red")
+        error_text.append("\n\n", style="white")
+        error_text.append(f"Error: {e}", style="dim white")
+
+        panel = Panel(
+            error_text,
+            title="[bold white]STRIX",
+            title_align="left",
+            border_style="red",
+            padding=(1, 2),
+        )
+        console.print("\n")
+        console.print(panel)
+        console.print()
+        sys.exit(1)
+
+    console.print()
+
+    success_text = Text()
+    success_text.append("GitHub Copilot authentication successful", style="bold #22c55e")
+    success_text.append("\n\n", style="white")
+    success_text.append("Token stored at: ", style="white")
+    success_text.append(str(_get_github_copilot_token_path()), style="#60a5fa")
+    success_text.append("\n\n", style="white")
+    success_text.append("You can now use GitHub Copilot as your LLM provider:\n", style="white")
+    success_text.append(
+        "  export STRIX_LLM='github_copilot/gpt-4o'\n",
+        style="dim white",
+    )
+    success_text.append(
+        "  strix --target https://example.com",
+        style="dim white",
+    )
+
+    panel = Panel(
+        success_text,
+        title="[bold white]STRIX",
+        title_align="left",
+        border_style="#22c55e",
+        padding=(1, 2),
+    )
+    console.print(panel)
+    console.print()
+
+    try:
+        api_key = auth.get_api_key()
+        if api_key:
+            token_path = _get_github_copilot_token_path()
+            api_key_path = token_path.parent / os.getenv(
+                "GITHUB_COPILOT_API_KEY_FILE", "api-key.json"
+            )
+            if api_key_path.exists():
+                with api_key_path.open() as f:
+                    api_key_info = json.load(f)
+                    expires_at = api_key_info.get("expires_at", 0)
+                    if expires_at:
+                        from datetime import datetime
+
+                        exp_time = datetime.fromtimestamp(expires_at, tz=UTC)
+                        exp_str = exp_time.strftime("%Y-%m-%d %H:%M:%S UTC")
+                        console.print(f"[dim]API key valid until: {exp_str}[/]")
+                        console.print()
+    except Exception:  # noqa: BLE001
+        logging.getLogger(__name__).debug("Failed to display API key info", exc_info=True)
+
+
 def validate_environment() -> None:  # noqa: PLR0912, PLR0915
     console = Console()
     missing_required_vars = []
@@ -53,6 +208,7 @@ def validate_environment() -> None:  # noqa: PLR0912, PLR0915
 
     strix_llm = Config.get("strix_llm")
     uses_strix_models = strix_llm and strix_llm.startswith("strix/")
+    is_copilot = _is_github_copilot_model()
 
     if not strix_llm:
         missing_required_vars.append("STRIX_LLM")
@@ -66,7 +222,7 @@ def validate_environment() -> None:  # noqa: PLR0912, PLR0915
         ]
     )
 
-    if not Config.get("llm_api_key"):
+    if not Config.get("llm_api_key") and not is_copilot:
         missing_optional_vars.append("LLM_API_KEY")
 
     if not has_base_url:
@@ -203,10 +359,56 @@ def check_docker_installed() -> None:
         sys.exit(1)
 
 
-async def warm_up_llm() -> None:
+async def warm_up_llm() -> None:  # noqa: PLR0915
     from strix.config.config import resolve_llm_config
 
     console = Console()
+
+    if _is_github_copilot_model():
+        if not _has_github_copilot_token():
+            error_text = Text()
+            error_text.append("GITHUB COPILOT NOT AUTHENTICATED", style="bold red")
+            error_text.append("\n\n", style="white")
+            error_text.append("No cached GitHub Copilot token found.\n", style="white")
+            error_text.append("Run the following command to authenticate:\n\n", style="white")
+            error_text.append("  strix --auth-github-copilot", style="bold cyan")
+
+            panel = Panel(
+                error_text,
+                title="[bold white]STRIX",
+                title_align="left",
+                border_style="red",
+                padding=(1, 2),
+            )
+
+            console.print("\n")
+            console.print(panel)
+            console.print()
+            sys.exit(1)
+
+        if not _validate_github_copilot_token():
+            error_text = Text()
+            error_text.append("GITHUB COPILOT TOKEN EXPIRED", style="bold red")
+            error_text.append("\n\n", style="white")
+            error_text.append(
+                "Your cached GitHub Copilot token is expired or invalid.\n",
+                style="white",
+            )
+            error_text.append("Run the following command to re-authenticate:\n\n", style="white")
+            error_text.append("  strix --auth-github-copilot", style="bold cyan")
+
+            panel = Panel(
+                error_text,
+                title="[bold white]STRIX",
+                title_align="left",
+                border_style="red",
+                padding=(1, 2),
+            )
+
+            console.print("\n")
+            console.print(panel)
+            console.print()
+            sys.exit(1)
 
     try:
         model_name, api_key, api_base = resolve_llm_config()
@@ -228,6 +430,10 @@ async def warm_up_llm() -> None:
         if api_base:
             completion_kwargs["api_base"] = api_base
 
+        from strix.llm.copilot import maybe_copilot_headers
+
+        completion_kwargs.update(maybe_copilot_headers(model_name))
+
         response = litellm.completion(**completion_kwargs)
 
         validate_llm_response(response)
@@ -239,6 +445,13 @@ async def warm_up_llm() -> None:
         error_text.append("Could not establish connection to the language model.\n", style="white")
         error_text.append("Please check your configuration and try again.\n", style="white")
         error_text.append(f"\nError: {e}", style="dim white")
+
+        if _is_github_copilot_model():
+            error_text.append("\n\n", style="white")
+            error_text.append(
+                "Tip: Try re-authenticating with: strix --auth-github-copilot",
+                style="dim yellow",
+            )
 
         panel = Panel(
             error_text,
@@ -295,6 +508,11 @@ Examples:
   # Custom instructions (from file)
   strix --target example.com --instruction-file ./instructions.txt
   strix --target https://app.com --instruction-file /path/to/detailed_instructions.md
+
+  # Authenticate with GitHub Copilot (one-time setup)
+  strix --auth-github-copilot
+  export STRIX_LLM='github_copilot/gpt-4o'
+  strix --target https://example.com
         """,
     )
 
@@ -306,10 +524,16 @@ Examples:
     )
 
     parser.add_argument(
+        "--auth-github-copilot",
+        action="store_true",
+        help="Authenticate with GitHub Copilot via OAuth device flow. "
+        "Run this once before using 'github_copilot/' models with STRIX_LLM.",
+    )
+
+    parser.add_argument(
         "-t",
         "--target",
         type=str,
-        required=True,
         action="append",
         help="Target to test (URL, repository, local directory path, domain name, or IP address). "
         "Can be specified multiple times for multi-target scans.",
@@ -365,6 +589,12 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    if args.auth_github_copilot:
+        return args
+
+    if not args.target:
+        parser.error("the following arguments are required: -t/--target")
 
     if args.instruction and args.instruction_file:
         parser.error(
@@ -523,6 +753,10 @@ def main() -> None:
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     args = parse_arguments()
+
+    if args.auth_github_copilot:
+        authenticate_github_copilot()
+        return
 
     if args.config:
         apply_config_override(args.config)
