@@ -12,11 +12,11 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
+import docker
+from docker.errors import DockerException, ImageNotFound
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-
-from strix.config import Config
 
 
 # Token formatting utilities
@@ -163,32 +163,34 @@ def format_vulnerability_report(report: dict[str, Any]) -> Text:  # noqa: PLR091
         text.append("\n")
         text.append(poc_script_code, style="dim")
 
-    code_file = report.get("code_file")
-    if code_file:
+    code_locations = report.get("code_locations")
+    if code_locations:
         text.append("\n\n")
-        text.append("Code File: ", style=field_style)
-        text.append(code_file)
-
-    code_before = report.get("code_before")
-    if code_before:
-        text.append("\n\n")
-        text.append("Code Before", style=field_style)
-        text.append("\n")
-        text.append(code_before, style="dim")
-
-    code_after = report.get("code_after")
-    if code_after:
-        text.append("\n\n")
-        text.append("Code After", style=field_style)
-        text.append("\n")
-        text.append(code_after, style="dim")
-
-    code_diff = report.get("code_diff")
-    if code_diff:
-        text.append("\n\n")
-        text.append("Code Diff", style=field_style)
-        text.append("\n")
-        text.append(code_diff, style="dim")
+        text.append("Code Locations", style=field_style)
+        for i, loc in enumerate(code_locations):
+            text.append("\n\n")
+            text.append(f"  Location {i + 1}: ", style="dim")
+            text.append(loc.get("file", "unknown"), style="bold")
+            start = loc.get("start_line")
+            end = loc.get("end_line")
+            if start is not None:
+                if end and end != start:
+                    text.append(f":{start}-{end}")
+                else:
+                    text.append(f":{start}")
+            if loc.get("label"):
+                text.append(f"\n  {loc['label']}", style="italic dim")
+            if loc.get("snippet"):
+                text.append("\n  ")
+                text.append(loc["snippet"], style="dim")
+            if loc.get("fix_before") or loc.get("fix_after"):
+                text.append("\n  Fix:")
+                if loc.get("fix_before"):
+                    text.append("\n  - ", style="dim")
+                    text.append(loc["fix_before"], style="dim")
+                if loc.get("fix_after"):
+                    text.append("\n  + ", style="dim")
+                    text.append(loc["fix_after"], style="dim")
 
     remediation_steps = report.get("remediation_steps")
     if remediation_steps:
@@ -731,34 +733,18 @@ def clone_repository(repo_url: str, run_name: str, dest_name: str | None = None)
         sys.exit(1)
 
 
-def get_host_gateway_hostname() -> str:
-    backend = Config.get("strix_runtime_backend") or "docker"
-    if backend == "podman":
-        return "host.containers.internal"
-    return "host.docker.internal"
-
-
-def check_container_connection() -> Any:
-    backend = Config.get("strix_runtime_backend") or "docker"
-    console = Console()
-
+# Docker utilities
+def check_docker_connection() -> Any:
     try:
-        if backend == "podman":
-            from podman import PodmanClient  # type: ignore[import-untyped]
-
-            return PodmanClient(base_url=_detect_podman_socket())
-        import docker  # type: ignore[import-untyped]
-
         return docker.from_env()
-    except Exception:  # noqa: BLE001
-        runtime_name = backend.capitalize()
+    except DockerException:
+        console = Console()
         error_text = Text()
-        error_text.append(f"{runtime_name.upper()} NOT AVAILABLE", style="bold red")
+        error_text.append("DOCKER NOT AVAILABLE", style="bold red")
         error_text.append("\n\n", style="white")
-        error_text.append(f"Cannot connect to {runtime_name} daemon.\n", style="white")
+        error_text.append("Cannot connect to Docker daemon.\n", style="white")
         error_text.append(
-            f"Please ensure {runtime_name} is installed and running, "
-            "and try running strix again.\n",
+            "Please ensure Docker Desktop is installed and running, and try running strix again.\n",
             style="white",
         )
 
@@ -770,30 +756,13 @@ def check_container_connection() -> Any:
             padding=(1, 2),
         )
         console.print("\n", panel, "\n")
-        raise RuntimeError(f"{runtime_name} not available") from None
+        raise RuntimeError("Docker not available") from None
 
 
-def _detect_podman_socket() -> str:
-    import os as _os
-
-    uid = _os.getuid()
-    candidates = [
-        f"unix:///run/user/{uid}/podman/podman.sock",
-        f"unix:///tmp/podman-run-{uid}/podman/podman.sock",
-        "unix:///run/podman/podman.sock",
-        "unix:///var/run/podman/podman.sock",
-    ]
-    for candidate in candidates:
-        sock_path = candidate.replace("unix://", "")
-        if Path(sock_path).exists():
-            return candidate
-    return candidates[0]
-
-
-def container_image_exists(client: Any, image_name: str) -> bool:
+def image_exists(client: Any, image_name: str) -> bool:
     try:
         client.images.get(image_name)
-    except Exception:  # noqa: BLE001
+    except ImageNotFound:
         return False
     else:
         return True

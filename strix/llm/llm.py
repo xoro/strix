@@ -185,9 +185,6 @@ class LLM:
         conversation_history.extend(compressed)
         messages.extend(compressed)
 
-        if self._is_copilot() and messages and messages[-1].get("role") != "user":
-            messages.append({"role": "user", "content": "Continue."})
-
         if self._is_anthropic() and self.config.enable_prompt_caching:
             messages = self._add_cache_control(messages)
 
@@ -204,19 +201,12 @@ class LLM:
             "stream_options": {"include_usage": True},
         }
 
-        if api_key := Config.get("llm_api_key"):
-            args["api_key"] = api_key
-        if api_base := (
-            Config.get("llm_api_base")
-            or Config.get("openai_api_base")
-            or Config.get("litellm_base_url")
-            or Config.get("ollama_api_base")
-        ):
-            args["api_base"] = api_base
+        if self.config.api_key:
+            args["api_key"] = self.config.api_key
+        if self.config.api_base:
+            args["api_base"] = self.config.api_base
         if self._supports_reasoning():
             args["reasoning_effort"] = self._reasoning_effort
-
-        args.update(maybe_copilot_headers(self.config.model_name))
 
         return args
 
@@ -283,11 +273,6 @@ class LLM:
         if not self.config.model_name:
             return False
         return any(p in self.config.model_name.lower() for p in ["anthropic/", "claude"])
-
-    def _is_copilot(self) -> bool:
-        if not self.config.model_name:
-            return False
-        return self.config.model_name.lower().startswith("github_copilot/")
 
     def _supports_vision(self) -> bool:
         try:

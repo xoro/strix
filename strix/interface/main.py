@@ -5,16 +5,14 @@ Strix Agent Interface
 
 import argparse
 import asyncio
-import json
 import logging
-import os
 import shutil
 import sys
-from datetime import UTC
 from pathlib import Path
 from typing import Any
 
 import litellm
+from docker.errors import DockerException
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -29,18 +27,18 @@ from strix.interface.tui import run_tui  # noqa: E402
 from strix.interface.utils import (  # noqa: E402
     assign_workspace_subdirs,
     build_final_stats_text,
-    check_container_connection,
+    check_docker_connection,
     clone_repository,
     collect_local_sources,
-    container_image_exists,
     generate_run_name,
-    get_host_gateway_hostname,
+    image_exists,
     infer_target_type,
     process_pull_line,
     rewrite_localhost_targets,
     validate_config_file,
     validate_llm_response,
 )
+from strix.runtime.docker_runtime import HOST_GATEWAY_HOSTNAME  # noqa: E402
 from strix.telemetry import posthog  # noqa: E402
 from strix.telemetry.tracer import get_global_tracer  # noqa: E402
 
@@ -48,169 +46,18 @@ from strix.telemetry.tracer import get_global_tracer  # noqa: E402
 logging.getLogger().setLevel(logging.ERROR)
 
 
-def _is_github_copilot_model(model_name: str | None = None) -> bool:
-    name = model_name or Config.get("strix_llm") or ""
-    return name.lower().startswith("github_copilot/")
-
-
-def _get_github_copilot_token_path() -> Path:
-    token_dir = os.getenv(
-        "GITHUB_COPILOT_TOKEN_DIR",
-        str(Path.home() / ".config/litellm/github_copilot"),
-    )
-    return Path(token_dir) / os.getenv("GITHUB_COPILOT_ACCESS_TOKEN_FILE", "access-token")
-
-
-def _has_github_copilot_token() -> bool:
-    token_path = _get_github_copilot_token_path()
-    if not token_path.exists():
-        return False
-    try:
-        return bool(token_path.read_text().strip())
-    except OSError:
-        return False
-
-
-def _validate_github_copilot_token() -> bool:
-    """Check whether the stored GitHub Copilot access token is still valid.
-
-    Returns ``True`` when the token is accepted by GitHub, ``False`` otherwise.
-    """
-    token_path = _get_github_copilot_token_path()
-    try:
-        token = token_path.read_text().strip()
-        if not token:
-            return False
-    except OSError:
-        return False
-
-    try:
-        import httpx
-
-        resp = httpx.get(
-            "https://api.github.com/user",
-            headers={
-                "Authorization": f"token {token}",
-                "Accept": "application/json",
-            },
-            timeout=10,
-        )
-    except Exception:  # noqa: BLE001
-        return False
-    else:
-        return resp.status_code == 200
-
-
-def _clear_github_copilot_tokens() -> None:
-    """Remove cached GitHub Copilot token files so a fresh login is triggered."""
-    import contextlib
-
-    token_path = _get_github_copilot_token_path()
-    api_key_path = token_path.parent / os.getenv("GITHUB_COPILOT_API_KEY_FILE", "api-key.json")
-    for path in (token_path, api_key_path):
-        with contextlib.suppress(OSError):
-            path.unlink(missing_ok=True)
-
-
-def authenticate_github_copilot() -> None:  # noqa: PLR0915
-    console = Console()
-
-    if _has_github_copilot_token():
-        console.print()
-        console.print("[dim]Existing GitHub Copilot token found.[/]")
-        console.print("[dim]Validating token...[/]")
-        if _validate_github_copilot_token():
-            console.print("[dim]Token is still valid.[/]")
-        else:
-            console.print("[dim yellow]Token is expired or invalid. Clearing cached tokens...[/]")
-            _clear_github_copilot_tokens()
-            console.print("[dim]Starting fresh authentication...[/]")
-        console.print()
-
-    try:
-        from litellm.llms.github_copilot.authenticator import Authenticator
-
-        auth = Authenticator()
-        auth.get_access_token()
-    except Exception as e:  # noqa: BLE001
-        error_text = Text()
-        error_text.append("GITHUB COPILOT AUTHENTICATION FAILED", style="bold red")
-        error_text.append("\n\n", style="white")
-        error_text.append(f"Error: {e}", style="dim white")
-
-        panel = Panel(
-            error_text,
-            title="[bold white]STRIX",
-            title_align="left",
-            border_style="red",
-            padding=(1, 2),
-        )
-        console.print("\n")
-        console.print(panel)
-        console.print()
-        sys.exit(1)
-
-    console.print()
-
-    success_text = Text()
-    success_text.append("GitHub Copilot authentication successful", style="bold #22c55e")
-    success_text.append("\n\n", style="white")
-    success_text.append("Token stored at: ", style="white")
-    success_text.append(str(_get_github_copilot_token_path()), style="#60a5fa")
-    success_text.append("\n\n", style="white")
-    success_text.append("You can now use GitHub Copilot as your LLM provider:\n", style="white")
-    success_text.append(
-        "  export STRIX_LLM='github_copilot/gpt-4o'\n",
-        style="dim white",
-    )
-    success_text.append(
-        "  strix --target https://example.com",
-        style="dim white",
-    )
-
-    panel = Panel(
-        success_text,
-        title="[bold white]STRIX",
-        title_align="left",
-        border_style="#22c55e",
-        padding=(1, 2),
-    )
-    console.print(panel)
-    console.print()
-
-    try:
-        api_key = auth.get_api_key()
-        if api_key:
-            token_path = _get_github_copilot_token_path()
-            api_key_path = token_path.parent / os.getenv(
-                "GITHUB_COPILOT_API_KEY_FILE", "api-key.json"
-            )
-            if api_key_path.exists():
-                with api_key_path.open() as f:
-                    api_key_info = json.load(f)
-                    expires_at = api_key_info.get("expires_at", 0)
-                    if expires_at:
-                        from datetime import datetime
-
-                        exp_time = datetime.fromtimestamp(expires_at, tz=UTC)
-                        exp_str = exp_time.strftime("%Y-%m-%d %H:%M:%S UTC")
-                        console.print(f"[dim]API key valid until: {exp_str}[/]")
-                        console.print()
-    except Exception:  # noqa: BLE001
-        logging.getLogger(__name__).debug("Failed to display API key info", exc_info=True)
-
-
 def validate_environment() -> None:  # noqa: PLR0912, PLR0915
     console = Console()
     missing_required_vars = []
     missing_optional_vars = []
 
-    if not Config.get("strix_llm"):
+    strix_llm = Config.get("strix_llm")
+    uses_strix_models = strix_llm and strix_llm.startswith("strix/")
+
+    if not strix_llm:
         missing_required_vars.append("STRIX_LLM")
 
-    is_copilot = _is_github_copilot_model()
-
-    has_base_url = any(
+    has_base_url = uses_strix_models or any(
         [
             Config.get("llm_api_base"),
             Config.get("openai_api_base"),
@@ -219,7 +66,7 @@ def validate_environment() -> None:  # noqa: PLR0912, PLR0915
         ]
     )
 
-    if not Config.get("llm_api_key") and not is_copilot:
+    if not Config.get("llm_api_key"):
         missing_optional_vars.append("LLM_API_KEY")
 
     if not has_base_url:
@@ -252,7 +99,7 @@ def validate_environment() -> None:  # noqa: PLR0912, PLR0915
                 error_text.append("• ", style="white")
                 error_text.append("STRIX_LLM", style="bold cyan")
                 error_text.append(
-                    " - Model name to use with litellm (e.g., 'openai/gpt-5')\n",
+                    " - Model name to use with litellm (e.g., 'anthropic/claude-sonnet-4-6')\n",
                     style="white",
                 )
 
@@ -291,7 +138,10 @@ def validate_environment() -> None:  # noqa: PLR0912, PLR0915
                     )
 
         error_text.append("\nExample setup:\n", style="white")
-        error_text.append("export STRIX_LLM='openai/gpt-5'\n", style="dim white")
+        if uses_strix_models:
+            error_text.append("export STRIX_LLM='strix/claude-sonnet-4.6'\n", style="dim white")
+        else:
+            error_text.append("export STRIX_LLM='anthropic/claude-sonnet-4-6'\n", style="dim white")
 
         if missing_optional_vars:
             for var in missing_optional_vars:
@@ -331,20 +181,15 @@ def validate_environment() -> None:  # noqa: PLR0912, PLR0915
         sys.exit(1)
 
 
-def check_container_runtime_installed() -> None:
-    backend = Config.get("strix_runtime_backend") or "docker"
-    cli_name = "podman" if backend == "podman" else "docker"
-
-    if shutil.which(cli_name) is None:
+def check_docker_installed() -> None:
+    if shutil.which("docker") is None:
         console = Console()
         error_text = Text()
-        error_text.append(f"{cli_name.upper()} NOT INSTALLED", style="bold red")
+        error_text.append("DOCKER NOT INSTALLED", style="bold red")
         error_text.append("\n\n", style="white")
-        error_text.append(f"The '{cli_name}' CLI was not found in your PATH.\n", style="white")
+        error_text.append("The 'docker' CLI was not found in your PATH.\n", style="white")
         error_text.append(
-            f"Please install {cli_name.capitalize()} and ensure the '{cli_name}' command "
-            "is available.\n\n",
-            style="white",
+            "Please install Docker and ensure the 'docker' command is available.\n\n", style="white"
         )
 
         panel = Panel(
@@ -358,63 +203,13 @@ def check_container_runtime_installed() -> None:
         sys.exit(1)
 
 
-async def warm_up_llm() -> None:  # noqa: PLR0915
+async def warm_up_llm() -> None:
+    from strix.config.config import resolve_llm_config
+
     console = Console()
-    if _is_github_copilot_model():
-        if not _has_github_copilot_token():
-            error_text = Text()
-            error_text.append("GITHUB COPILOT NOT AUTHENTICATED", style="bold red")
-            error_text.append("\n\n", style="white")
-            error_text.append("No cached GitHub Copilot token found.\n", style="white")
-            error_text.append("Run the following command to authenticate:\n\n", style="white")
-            error_text.append("  strix --auth-github-copilot", style="bold cyan")
-
-            panel = Panel(
-                error_text,
-                title="[bold white]STRIX",
-                title_align="left",
-                border_style="red",
-                padding=(1, 2),
-            )
-
-            console.print("\n")
-            console.print(panel)
-            console.print()
-            sys.exit(1)
-
-        if not _validate_github_copilot_token():
-            error_text = Text()
-            error_text.append("GITHUB COPILOT TOKEN EXPIRED", style="bold red")
-            error_text.append("\n\n", style="white")
-            error_text.append(
-                "Your cached GitHub Copilot token is expired or invalid.\n",
-                style="white",
-            )
-            error_text.append("Run the following command to re-authenticate:\n\n", style="white")
-            error_text.append("  strix --auth-github-copilot", style="bold cyan")
-
-            panel = Panel(
-                error_text,
-                title="[bold white]STRIX",
-                title_align="left",
-                border_style="red",
-                padding=(1, 2),
-            )
-
-            console.print("\n")
-            console.print(panel)
-            console.print()
-            sys.exit(1)
 
     try:
-        model_name = Config.get("strix_llm")
-        api_key = Config.get("llm_api_key")
-        api_base = (
-            Config.get("llm_api_base")
-            or Config.get("openai_api_base")
-            or Config.get("litellm_base_url")
-            or Config.get("ollama_api_base")
-        )
+        model_name, api_key, api_base = resolve_llm_config()
 
         test_messages = [
             {"role": "system", "content": "You are a helpful assistant."},
@@ -433,10 +228,6 @@ async def warm_up_llm() -> None:  # noqa: PLR0915
         if api_base:
             completion_kwargs["api_base"] = api_base
 
-        from strix.llm.copilot import maybe_copilot_headers
-
-        completion_kwargs.update(maybe_copilot_headers(model_name))
-
         response = litellm.completion(**completion_kwargs)
 
         validate_llm_response(response)
@@ -448,13 +239,6 @@ async def warm_up_llm() -> None:  # noqa: PLR0915
         error_text.append("Could not establish connection to the language model.\n", style="white")
         error_text.append("Please check your configuration and try again.\n", style="white")
         error_text.append(f"\nError: {e}", style="dim white")
-
-        if _is_github_copilot_model():
-            error_text.append("\n\n", style="white")
-            error_text.append(
-                "Tip: Try re-authenticating with: strix --auth-github-copilot",
-                style="dim yellow",
-            )
 
         panel = Panel(
             error_text,
@@ -511,11 +295,6 @@ Examples:
   # Custom instructions (from file)
   strix --target example.com --instruction-file ./instructions.txt
   strix --target https://app.com --instruction-file /path/to/detailed_instructions.md
-
-  # Authenticate with GitHub Copilot (one-time setup)
-  strix --auth-github-copilot
-  export STRIX_LLM='github_copilot/gpt-4o'
-  strix --target https://example.com
         """,
     )
 
@@ -527,16 +306,10 @@ Examples:
     )
 
     parser.add_argument(
-        "--auth-github-copilot",
-        action="store_true",
-        help="Authenticate with GitHub Copilot via OAuth device flow. "
-        "Run this once before using 'github_copilot/' models with STRIX_LLM.",
-    )
-
-    parser.add_argument(
         "-t",
         "--target",
         type=str,
+        required=True,
         action="append",
         help="Target to test (URL, repository, local directory path, domain name, or IP address). "
         "Can be specified multiple times for multi-target scans.",
@@ -593,12 +366,6 @@ Examples:
 
     args = parser.parse_args()
 
-    if args.auth_github_copilot:
-        return args
-
-    if not args.target:
-        parser.error("the following arguments are required: -t/--target")
-
     if args.instruction and args.instruction_file:
         parser.error(
             "Cannot specify both --instruction and --instruction-file. Use one or the other."
@@ -631,8 +398,7 @@ Examples:
             parser.error(f"Invalid target '{target}'")
 
     assign_workspace_subdirs(args.targets_info)
-    host_gateway = get_host_gateway_hostname()
-    rewrite_localhost_targets(args.targets_info, host_gateway)
+    rewrite_localhost_targets(args.targets_info, HOST_GATEWAY_HOSTNAME)
 
     return args
 
@@ -698,36 +464,32 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
     console.print()
 
 
-def pull_container_image() -> None:
+def pull_docker_image() -> None:
     console = Console()
-    backend = Config.get("strix_runtime_backend") or "docker"
-    image_name = Config.get("strix_image")
+    client = check_docker_connection()
 
-    if not image_name:
-        return
-
-    client = check_container_connection()
-
-    if container_image_exists(client, image_name):
+    if image_exists(client, Config.get("strix_image")):  # type: ignore[arg-type]
         return
 
     console.print()
-    console.print(f"[dim]Pulling image[/] {image_name}")
+    console.print(f"[dim]Pulling image[/] {Config.get('strix_image')}")
     console.print("[dim yellow]This only happens on first run and may take a few minutes...[/]")
     console.print()
 
     with console.status("[bold cyan]Downloading image layers...", spinner="dots") as status:
         try:
-            if backend == "podman":
-                _pull_with_podman(client, image_name, status)
-            else:
-                _pull_with_docker(client, image_name, status)
-        except Exception as e:  # noqa: BLE001
+            layers_info: dict[str, str] = {}
+            last_update = ""
+
+            for line in client.api.pull(Config.get("strix_image"), stream=True, decode=True):
+                last_update = process_pull_line(line, layers_info, status, last_update)
+
+        except DockerException as e:
             console.print()
             error_text = Text()
             error_text.append("FAILED TO PULL IMAGE", style="bold red")
             error_text.append("\n\n", style="white")
-            error_text.append(f"Could not download: {image_name}\n", style="white")
+            error_text.append(f"Could not download: {Config.get('strix_image')}\n", style="white")
             error_text.append(str(e), style="dim red")
 
             panel = Panel(
@@ -741,33 +503,9 @@ def pull_container_image() -> None:
             sys.exit(1)
 
     success_text = Text()
-    success_text.append("Container image ready", style="#22c55e")
+    success_text.append("Docker image ready", style="#22c55e")
     console.print(success_text)
     console.print()
-
-
-def _pull_with_docker(client: Any, image_name: str, status: Any) -> None:
-    layers_info: dict[str, str] = {}
-    last_update = ""
-
-    for line in client.api.pull(image_name, stream=True, decode=True):
-        last_update = process_pull_line(line, layers_info, status, last_update)
-
-
-def _pull_with_podman(client: Any, image_name: str, status: Any) -> None:  # noqa: ARG001
-    import subprocess
-
-    podman_bin = shutil.which("podman") or "podman"
-    status.update("[bold cyan]Pulling image via podman CLI...")
-
-    result = subprocess.run(  # noqa: S603
-        [podman_bin, "pull", "--platform", "linux/amd64", image_name],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"podman pull failed: {result.stderr.strip()}")
 
 
 def apply_config_override(config_path: str) -> None:
@@ -780,21 +518,17 @@ def persist_config() -> None:
         save_current_config()
 
 
-def main() -> None:  # noqa: PLR0912
+def main() -> None:
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     args = parse_arguments()
 
-    if args.auth_github_copilot:
-        authenticate_github_copilot()
-        return
-
     if args.config:
         apply_config_override(args.config)
 
-    check_container_runtime_installed()
-    pull_container_image()
+    check_docker_installed()
+    pull_docker_image()
 
     validate_environment()
     asyncio.run(warm_up_llm())

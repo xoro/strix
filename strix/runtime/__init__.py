@@ -27,13 +27,6 @@ def get_runtime() -> AbstractRuntime:
             _global_runtime = DockerRuntime()
         return _global_runtime
 
-    if runtime_backend == "podman":
-        from .podman_runtime import PodmanRuntime
-
-        if _global_runtime is None:
-            _global_runtime = PodmanRuntime()
-        return _global_runtime
-
     raise ValueError(
         f"Unsupported runtime backend: {runtime_backend}. Supported backends: 'docker', 'podman'."
     )

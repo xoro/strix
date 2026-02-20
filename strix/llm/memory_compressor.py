@@ -1,11 +1,9 @@
 import logging
-import time
 from typing import Any
 
 import litellm
 
-from strix.config import Config
-from strix.llm.copilot import maybe_copilot_headers
+from strix.config.config import Config, resolve_llm_config
 
 
 logger = logging.getLogger(__name__)
@@ -90,7 +88,7 @@ def _extract_message_text(msg: dict[str, Any]) -> str:
 def _summarize_messages(
     messages: list[dict[str, Any]],
     model: str,
-    timeout: int = 120,
+    timeout: int = 30,
 ) -> dict[str, Any]:
     if not messages:
         empty_summary = "<context_summary message_count='0'>{text}</context_summary>"
@@ -108,60 +106,31 @@ def _summarize_messages(
     conversation = "\n".join(formatted)
     prompt = SUMMARY_PROMPT_TEMPLATE.format(conversation=conversation)
 
-    api_key = Config.get("llm_api_key")
-    api_base = (
-        Config.get("llm_api_base")
-        or Config.get("openai_api_base")
-        or Config.get("litellm_base_url")
-        or Config.get("ollama_api_base")
-    )
+    _, api_key, api_base = resolve_llm_config()
 
-    completion_args: dict[str, Any] = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "timeout": timeout,
-    }
-    if api_key:
-        completion_args["api_key"] = api_key
-    if api_base:
-        completion_args["api_base"] = api_base
+    try:
+        completion_args: dict[str, Any] = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "timeout": timeout,
+        }
+        if api_key:
+            completion_args["api_key"] = api_key
+        if api_base:
+            completion_args["api_base"] = api_base
 
-    completion_args.update(maybe_copilot_headers(model))
-
-    last_exception: Exception | None = None
-    for attempt in range(1, SUMMARIZE_MAX_RETRIES + 1):
-        try:
-            response = litellm.completion(**completion_args)
-            summary = response.choices[0].message.content or ""
-            if not summary.strip():
-                return messages[0]
-            summary_msg = "<context_summary message_count='{count}'>{text}</context_summary>"
-            return {
-                "role": "assistant",
-                "content": summary_msg.format(count=len(messages), text=summary),
-            }
-        except (litellm.exceptions.Timeout, litellm.exceptions.APIConnectionError) as exc:
-            last_exception = exc
-            if attempt < SUMMARIZE_MAX_RETRIES:
-                backoff = SUMMARIZE_INITIAL_BACKOFF * (2 ** (attempt - 1))
-                logger.warning(
-                    "Summarization attempt %d/%d timed out, retrying in %.1fs",
-                    attempt,
-                    SUMMARIZE_MAX_RETRIES,
-                    backoff,
-                )
-                time.sleep(backoff)
-            else:
-                logger.warning(
-                    "Summarization failed after %d attempts: %s",
-                    SUMMARIZE_MAX_RETRIES,
-                    last_exception,
-                )
-        except Exception:
-            logger.exception("Failed to summarize messages")
+        response = litellm.completion(**completion_args)
+        summary = response.choices[0].message.content or ""
+        if not summary.strip():
             return messages[0]
-
-    return messages[0]
+        summary_msg = "<context_summary message_count='{count}'>{text}</context_summary>"
+        return {
+            "role": "assistant",
+            "content": summary_msg.format(count=len(messages), text=summary),
+        }
+    except Exception:
+        logger.exception("Failed to summarize messages")
+        return messages[0]
 
 
 def _handle_images(messages: list[dict[str, Any]], max_images: int) -> None:
@@ -191,7 +160,7 @@ class MemoryCompressor:
     ):
         self.max_images = max_images
         self.model_name = model_name or Config.get("strix_llm")
-        self.timeout = timeout or int(Config.get("strix_memory_compressor_timeout") or "120")
+        self.timeout = timeout or int(Config.get("strix_memory_compressor_timeout") or "30")
 
         if not self.model_name:
             raise ValueError("STRIX_LLM environment variable must be set and not empty")

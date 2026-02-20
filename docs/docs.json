@@ -32,13 +32,13 @@
             "group": "LLM Providers",
             "pages": [
               "llm-providers/overview",
+              "llm-providers/models",
               "llm-providers/openai",
               "llm-providers/anthropic",
               "llm-providers/openrouter",
               "llm-providers/vertex",
               "llm-providers/bedrock",
               "llm-providers/azure",
-              "llm-providers/github-copilot",
               "llm-providers/local"
             ]
           },

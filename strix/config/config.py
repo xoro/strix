@@ -1,15 +1,11 @@
 import contextlib
 import json
 import os
-import sys
 from pathlib import Path
 from typing import Any
 
 
-def _default_runtime_backend() -> str:
-    if sys.platform.startswith("freebsd"):
-        return "podman"
-    return "docker"
+STRIX_API_BASE = "https://models.strix.ai/api/v1"
 
 
 class Config:
@@ -45,7 +41,7 @@ class Config:
 
     # Runtime Configuration
     strix_image = "ghcr.io/usestrix/strix-sandbox:0.1.11"
-    strix_runtime_backend = _default_runtime_backend()
+    strix_runtime_backend = "docker"
     strix_sandbox_execution_timeout = "120"
     strix_sandbox_connect_timeout = "10"
 
@@ -184,3 +180,30 @@ def apply_saved_config(force: bool = False) -> dict[str, str]:
 
 def save_current_config() -> bool:
     return Config.save_current()
+
+
+def resolve_llm_config() -> tuple[str | None, str | None, str | None]:
+    """Resolve LLM model, api_key, and api_base based on STRIX_LLM prefix.
+
+    Returns:
+        tuple: (model_name, api_key, api_base)
+    """
+    model = Config.get("strix_llm")
+    if not model:
+        return None, None, None
+
+    api_key = Config.get("llm_api_key")
+
+    if model.startswith("strix/"):
+        model_name = "openai/" + model[6:]
+        api_base: str | None = STRIX_API_BASE
+    else:
+        model_name = model
+        api_base = (
+            Config.get("llm_api_base")
+            or Config.get("openai_api_base")
+            or Config.get("litellm_base_url")
+            or Config.get("ollama_api_base")
+        )
+
+    return model_name, api_key, api_base

@@ -48,7 +48,7 @@ def _load_xml_schema(path: Path) -> Any:
     if not path.exists():
         return None
     try:
-        content = path.read_text()
+        content = path.read_text(encoding="utf-8")
 
         content = _process_dynamic_content(content)
 

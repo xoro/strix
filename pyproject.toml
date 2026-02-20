@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "strix-agent"
-version = "0.7.0"
+version = "0.8.0"
 description = "Open-source AI Hackers for your apps"
 authors = ["Strix <hi@usestrix.com>"]
 readme = "README.md"
@@ -51,8 +51,7 @@ litellm = { version = "~1.81.1", extras = ["proxy"] }
 tenacity = "^9.0.0"
 pydantic = {extras = ["email"], version = "^2.11.3"}
 rich = "*"
-docker = {version = "^7.1.0", markers = "sys_platform != 'freebsd'"}
-podman = {version = "^5.0.0", markers = "sys_platform == 'freebsd'"}
+docker = "^7.1.0"
 textual = "^4.0.0"
 xmltodict = "^0.13.0"
 requests = "^2.32.0"
@@ -149,8 +148,6 @@ module = [
     "libtmux.*",
     "pytest.*",
     "cvss.*",
-    "podman.*",
-    "docker.*",
 ]
 ignore_missing_imports = true
 

@@ -72,7 +72,9 @@ Strix are autonomous AI agents that act just like real hackers - they run your c
 
 **Prerequisites:**
 - Docker (running)
-- An LLM provider key (e.g. [get OpenAI API key](https://platform.openai.com/api-keys) or use a local LLM)
+- An LLM API key:
+  - Any [supported provider](https://docs.strix.ai/llm-providers/overview) (OpenAI, Anthropic, Google, etc.)
+  - Or [Strix Router](https://models.strix.ai) — single API key for multiple providers with $10 free credit on signup
 
 ### Installation & First Scan
 
@@ -84,7 +86,7 @@ curl -sSL https://strix.ai/install | bash
 pipx install strix-agent
 
 # Configure your AI provider
-export STRIX_LLM="openai/gpt-5"
+export STRIX_LLM="anthropic/claude-sonnet-4-6"  # or "strix/claude-sonnet-4.6" via Strix Router (https://models.strix.ai)
 export LLM_API_KEY="your-api-key"
 
 # Run your first security assessment
@@ -201,7 +203,7 @@ jobs:
 ### Configuration
 
 ```bash
-export STRIX_LLM="openai/gpt-5"
+export STRIX_LLM="anthropic/claude-sonnet-4-6"
 export LLM_API_KEY="your-api-key"
 
 # Optional
@@ -215,217 +217,11 @@ export STRIX_REASONING_EFFORT="high"  # control thinking effort (default: high, 
 
 **Recommended models for best results:**
 
+- [Anthropic Claude Sonnet 4.6](https://claude.com/platform/api) — `anthropic/claude-sonnet-4-6`
 - [OpenAI GPT-5](https://openai.com/api/) — `openai/gpt-5`
-- [Anthropic Claude Sonnet 4.5](https://claude.com/platform/api) — `anthropic/claude-sonnet-4-5`
 - [Google Gemini 3 Pro Preview](https://cloud.google.com/vertex-ai) — `vertex_ai/gemini-3-pro-preview`
 
 See the [LLM Providers documentation](https://docs.strix.ai/llm-providers/overview) for all supported providers including Vertex AI, Bedrock, Azure, and local models.
-
----
-
-## 🐳 Container Runtimes
-
-Strix executes security tools inside a sandboxed container (Kali Linux). By default it uses **Docker**, but **Podman** is also supported as an alternative backend — including on **FreeBSD**.
-
-### Docker (Default)
-
-No extra configuration needed. Strix uses Docker by default if it is installed and the Docker daemon is running.
-
-### Windows (WSL2 + Docker)
-
-Strix runs on Windows via **WSL2** (Windows Subsystem for Linux). This gives you a full Linux environment with Docker support.
-
-**1. Enable WSL2**
-
-Open **PowerShell as Administrator** and run:
-
-```powershell
-wsl --install
-```
-
-This installs WSL2 with Ubuntu by default. Restart your computer when prompted.
-
-> [!NOTE]
-> If WSL is already installed, ensure you're on WSL2: `wsl --set-default-version 2`
-
-**2. Install Docker inside WSL2**
-
-Open your WSL2 terminal (e.g., Ubuntu) and install Docker:
-
-```bash
-# Update packages
-sudo apt update && sudo apt upgrade -y
-
-# Install Docker
-sudo apt install -y docker.io
-
-# Start Docker
-sudo service docker start
-
-# Add your user to the docker group (avoids needing sudo)
-sudo usermod -aG docker $USER
-
-# Apply group changes (or log out and back in)
-newgrp docker
-
-# Verify Docker is working
-docker info
-```
-
-> [!TIP]
-> To start Docker automatically when WSL2 launches, add `sudo service docker start` to your `~/.bashrc` or use systemd if your distro supports it (`sudo systemctl enable docker`).
-
-**3. Install Strix**
-
-```bash
-# Install Strix
-curl -sSL https://strix.ai/install | bash
-
-# Or via pipx
-pipx install strix-agent
-
-# Configure your AI provider
-export STRIX_LLM="openai/gpt-5"
-export LLM_API_KEY="your-api-key"
-
-# Run a scan
-strix --target ./your-project
-```
-
-**4. (Alternative) Docker Desktop**
-
-If you prefer a GUI, you can install [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/) with WSL2 backend integration instead of installing Docker inside WSL2. Enable **Settings → Resources → WSL Integration** for your distro.
-
-#### Windows Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| `wsl --install` fails | Enable "Virtual Machine Platform" in Windows Features, or update Windows to build 19041+ |
-| Docker daemon not running | Run `sudo service docker start` inside WSL2 |
-| `permission denied` on Docker socket | Add user to docker group: `sudo usermod -aG docker $USER` then restart terminal |
-| `Cannot connect to Docker daemon` in Strix | Verify `docker info` works first; if using Docker Desktop, enable WSL2 integration |
-| Slow file I/O on `/mnt/c/` paths | Store projects inside the WSL2 filesystem (`~/projects/`) for better performance |
-
-### Podman
-
-To use Podman instead of Docker, set the runtime backend:
-
-```bash
-export STRIX_RUNTIME_BACKEND="podman"
-```
-
-Or add it to your `~/.strix/cli-config.json`:
-
-```json
-{
-  "strix_runtime_backend": "podman"
-}
-```
-
-#### Podman Setup (Linux)
-
-```bash
-# Install Podman
-sudo apt install podman        # Debian/Ubuntu
-sudo dnf install podman        # Fedora/RHEL
-
-# Start the Podman socket (required for the Podman SDK)
-podman system service --time=0 &
-
-# Or enable it as a systemd user service (persistent)
-systemctl --user enable --now podman.socket
-
-# Pull the sandbox image
-podman pull ghcr.io/usestrix/strix-sandbox:0.1.11
-
-# Install the Podman Python SDK
-pip install podman
-```
-
-#### Podman Setup (FreeBSD)
-
-Strix has full FreeBSD support via Podman with automatic workarounds for platform-specific differences (container networking, entrypoint compatibility, SDK limitations).
-
-**1. Install Podman and dependencies**
-
-```bash
-# Install Podman and the OCI runtime
-pkg install podman buildah
-
-# Enable and start the Podman service
-sysrc podman_enable=YES
-service podman start
-```
-
-**2. Configure container networking**
-
-FreeBSD uses a different networking stack than Linux. Podman containers communicate via direct container IP addresses (the `vnet` bridge) rather than host port forwarding.
-
-```bash
-# Verify the default CNI/netavark network is working
-podman network ls
-
-# Test container networking
-podman run --rm alpine ping -c1 1.1.1.1
-```
-
-**3. Pull the sandbox image and install Python dependencies**
-
-```bash
-# Pull the sandbox image (linux/amd64 — runs via QEMU emulation on FreeBSD)
-podman pull --arch amd64 ghcr.io/usestrix/strix-sandbox:0.1.11
-
-# Install the Podman Python SDK
-pip install podman
-```
-
-**4. Start the Podman socket**
-
-```bash
-# Start the socket for the current session
-podman system service --time=0 &
-
-# Verify the socket is accessible
-podman info --format '{{.Host.RemoteSocket.Path}}'
-```
-
-Strix auto-detects the socket at common locations (`/var/run/podman/podman.sock`, `/run/podman/podman.sock`, etc.). To specify a custom location:
-
-```bash
-export CONTAINER_HOST="unix:///path/to/podman.sock"
-```
-
-**5. Configure and run**
-
-```bash
-export STRIX_RUNTIME_BACKEND="podman"
-export STRIX_LLM="your-provider/your-model"
-export LLM_API_KEY="your-api-key"
-
-# Run a scan
-strix --target ./your-project
-```
-
-#### FreeBSD-Specific Notes
-
-- **Container IP networking**: Strix automatically uses direct container IP addresses on FreeBSD instead of host port forwarding, which is unreliable on the platform.
-- **Entrypoint compatibility**: The Kali sandbox entrypoint uses `sudo`, which is not available in FreeBSD's Podman environment. Strix automatically patches the entrypoint at container startup.
-- **CLI fallbacks**: Some Podman SDK operations (`put_archive`, `exec_run`, `container.start()`) are unreliable on FreeBSD. Strix transparently falls back to `podman` CLI subprocess calls for these operations.
-- **QEMU emulation**: The sandbox image is `linux/amd64`. On FreeBSD, it runs through QEMU emulation, so container startup is slower (~10s vs ~5s). This is handled automatically.
-- **Root recommended**: Running as root avoids permission issues with the Podman socket and container networking on FreeBSD.
-
-#### Troubleshooting Podman
-
-| Problem | Solution |
-|---------|----------|
-| `Podman socket not found` | Start the socket: `podman system service --time=0 &` |
-| `Podman socket not responding` | Verify Podman is running: `podman info` |
-| `Tool server failed to start` | Check container logs: `podman logs strix-scan-<id>` |
-| `Image not found` | Pull manually: `podman pull ghcr.io/usestrix/strix-sandbox:0.1.11` |
-| Container starts but tools fail | Verify networking: `podman exec <container> curl -s http://localhost:48081/health` |
-| Slow startup on FreeBSD | Expected due to QEMU emulation; Strix waits automatically |
-
----
 
 ## Documentation
 
