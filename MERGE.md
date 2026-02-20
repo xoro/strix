@@ -248,3 +248,4 @@ git diff upstream/main --stat  # should only show fork additions
 | Date | Upstream version | Notes |
 |------|-----------------|-------|
 | 2026-02-20 | v0.8.0 | Initial merge. Upstream refactored LLM config to `resolve_llm_config()`, removed `strix/cli/` directory. |
+| 2026-02-20 | — (post-merge fix) | Added retry with exponential backoff to `memory_compressor.py` `_summarize_messages()`. Increased default timeout from 30s to 120s. Wired up the previously unused `SUMMARIZE_MAX_RETRIES` / `SUMMARIZE_INITIAL_BACKOFF` constants. Fixes repeated `litellm.Timeout` errors during CI runs with Copilot. |
