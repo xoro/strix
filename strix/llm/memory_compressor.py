@@ -89,7 +89,7 @@ def _extract_message_text(msg: dict[str, Any]) -> str:
 def _summarize_messages(
     messages: list[dict[str, Any]],
     model: str,
-    timeout: int = 120,
+    timeout: int = 600,
 ) -> dict[str, Any]:
     if not messages:
         empty_summary = "<context_summary message_count='0'>{text}</context_summary>"
@@ -190,7 +190,7 @@ class MemoryCompressor:
     ):
         self.max_images = max_images
         self.model_name = model_name or Config.get("strix_llm")
-        self.timeout = timeout or int(Config.get("strix_memory_compressor_timeout") or "120")
+        self.timeout = timeout or int(Config.get("strix_memory_compressor_timeout") or "600")
 
         if not self.model_name:
             raise ValueError("STRIX_LLM environment variable must be set and not empty")
