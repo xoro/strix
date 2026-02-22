@@ -94,7 +94,7 @@ def _summarize_messages(
     if not messages:
         empty_summary = "<context_summary message_count='0'>{text}</context_summary>"
         return {
-            "role": "assistant",
+            "role": "user",
             "content": empty_summary.format(text="No messages to summarize"),
         }
 
@@ -157,10 +157,14 @@ def _summarize_messages(
         except Exception:
             logger.exception("Failed to summarize messages")
             return messages[0]
-
-    if last_exc is not None:
-        logger.error("All summarize retries exhausted, returning first message")
-    return messages[0]
+        summary_msg = "<context_summary message_count='{count}'>{text}</context_summary>"
+        return {
+            "role": "user",
+            "content": summary_msg.format(count=len(messages), text=summary),
+        }
+    except Exception:
+        logger.exception("Failed to summarize messages")
+        return messages[0]
 
 
 def _handle_images(messages: list[dict[str, Any]], max_images: int) -> None:
@@ -190,7 +194,7 @@ class MemoryCompressor:
     ):
         self.max_images = max_images
         self.model_name = model_name or Config.get("strix_llm")
-        self.timeout = timeout or int(Config.get("strix_memory_compressor_timeout") or "600")
+        self.timeout = timeout or int(Config.get("strix_memory_compressor_timeout") or "120")
 
         if not self.model_name:
             raise ValueError("STRIX_LLM environment variable must be set and not empty")

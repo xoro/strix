@@ -194,6 +194,9 @@ def resolve_llm_config() -> tuple[str | None, str | None, str | None]:
 
     Returns:
         tuple: (model_name, api_key, api_base)
+        - model_name: Original model name (strix/ prefix preserved for display)
+        - api_key: LLM API key
+        - api_base: API base URL (auto-set to STRIX_API_BASE for strix/ models)
     """
     model = Config.get("strix_llm")
     if not model:
@@ -202,10 +205,8 @@ def resolve_llm_config() -> tuple[str | None, str | None, str | None]:
     api_key = Config.get("llm_api_key")
 
     if model.startswith("strix/"):
-        model_name = "openai/" + model[6:]
         api_base: str | None = STRIX_API_BASE
     else:
-        model_name = model
         api_base = (
             Config.get("llm_api_base")
             or Config.get("openai_api_base")
@@ -213,4 +214,4 @@ def resolve_llm_config() -> tuple[str | None, str | None, str | None]:
             or Config.get("ollama_api_base")
         )
 
-    return model_name, api_key, api_base
+    return model, api_key, api_base
