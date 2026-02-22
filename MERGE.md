@@ -34,7 +34,7 @@ git remote add upstream https://github.com/usestrix/strix.git
 
 ```bash
 git checkout main
-git checkout -b pre-merge-backup
+git branch -D pre-merge-backup 2>/dev/null; git checkout -b pre-merge-backup
 git checkout main
 ```
 
