@@ -42,6 +42,14 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
     results_text.append("  ")
     results_text.append(f"strix_runs/{args.run_name}", style="#60a5fa")
 
+    scan_mode = getattr(args, "scan_mode", "deep")
+    llm_config = LLMConfig(scan_mode=scan_mode)
+
+    model_text = Text()
+    model_text.append("Model ", style="dim")
+    model_text.append("  ")
+    model_text.append(llm_config.model_name, style="bold white")
+
     note_text = Text()
     note_text.append("\n\n", style="dim")
     note_text.append("Vulnerabilities will be displayed in real-time.", style="dim")
@@ -53,6 +61,8 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
             target_text,
             "\n",
             results_text,
+            "\n",
+            model_text,
             note_text,
         ),
         title="[bold white]STRIX",
@@ -65,16 +75,12 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
     console.print(startup_panel)
     console.print()
 
-    scan_mode = getattr(args, "scan_mode", "deep")
-
     scan_config = {
         "scan_id": args.run_name,
         "targets": args.targets_info,
         "user_instructions": args.instruction or "",
         "run_name": args.run_name,
     }
-
-    llm_config = LLMConfig(scan_mode=scan_mode)
     agent_config = {
         "llm_config": llm_config,
         "max_iterations": 300,
