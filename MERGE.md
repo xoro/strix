@@ -141,12 +141,20 @@ if runtime_backend == "podman":
 
 Restore three things:
 
-1. **Copilot headers** in `_build_completion_args()`:
+1. **Top-level import** (already present in fork, verify it survived):
+   ```python
+   from strix.llm.copilot import maybe_copilot_headers
+   ```
+
+2. **Copilot headers** in `_build_completion_args()` (after the `reasoning_effort` block):
    ```python
    args.update(maybe_copilot_headers(self.config.model_name))
    ```
+   Note: `_build_completion_args()` uses `self.config.litellm_model` (the resolved API name)
+   as the `model` arg since v0.8.1. `maybe_copilot_headers()` still receives
+   `self.config.model_name` (the raw user-facing name) for Copilot detection.
 
-2. **`_is_copilot()` method**:
+3. **`_is_copilot()` method** (after `_is_anthropic()`):
    ```python
    def _is_copilot(self) -> bool:
        if not self.config.model_name:
@@ -154,29 +162,104 @@ Restore three things:
        return self.config.model_name.lower().startswith("github_copilot/")
    ```
 
-3. **"Continue." message** in `_prepare_messages()` (before the Anthropic cache control check):
+4. **"Continue." message** in `_prepare_messages()` (before the Anthropic cache control check).
+
+   **CRITICAL:** Since v0.8.1 upstream adds a general `<meta>Continue the task.</meta>` for
+   all models when the last message is `assistant`. The Copilot branch MUST be an `if/elif`
+   pair with that general check — NOT two separate `if` blocks:
+
    ```python
    if self._is_copilot() and messages and messages[-1].get("role") != "user":
        messages.append({"role": "user", "content": "Continue."})
+   elif messages[-1].get("role") == "assistant":
+       messages.append({"role": "user", "content": "<meta>Continue the task.</meta>"})
    ```
+
+   Replace the upstream-only `if messages[-1].get("role") == "assistant":` block with the
+   `if/elif` above. Using two separate `if` blocks will double-append for Copilot models.
 
 #### 5f. `strix/llm/dedupe.py` — Copilot headers
 
-Add after the `api_base` check in `check_duplicate()`:
+Add after the `api_base` check in `check_duplicate()`. As of v0.8.1, upstream also calls
+`resolve_strix_model()` to resolve `model_name` into a `litellm_model` for the `model` arg.
+The Copilot headers call uses the **pre-resolution** `model_name` (for detection), which is
+the value returned directly by `resolve_llm_config()`:
 
 ```python
 from strix.llm.copilot import maybe_copilot_headers
 completion_kwargs.update(maybe_copilot_headers(model_name))
 ```
 
-#### 5g. `strix/llm/memory_compressor.py` — Copilot headers
+#### 5g. `strix/llm/memory_compressor.py` — Copilot headers + retry loop
 
-Add after the `api_base` check in `_summarize_messages()`:
+**WARNING: This function is the most fragile merge point.** The merge strategy
+(`--strategy-option theirs`) will overwrite our retry loop with upstream's simple
+`try/except`, sometimes leaving orphaned `except` blocks at the wrong indentation that
+cause a `SyntaxError`. Always verify this function compiles after the merge.
+
+The entire body of `_summarize_messages()` from the `completion_args` dict through the
+end of the function must look like this after restoration:
 
 ```python
-from strix.llm.copilot import maybe_copilot_headers
-completion_args.update(maybe_copilot_headers(model))
+    completion_args: dict[str, Any] = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "timeout": timeout,
+    }
+    if api_key:
+        completion_args["api_key"] = api_key
+    if api_base:
+        completion_args["api_base"] = api_base
+
+    from strix.llm.copilot import maybe_copilot_headers
+
+    completion_args.update(maybe_copilot_headers(model))
+
+    last_exc: Exception | None = None
+    backoff = SUMMARIZE_INITIAL_BACKOFF
+
+    for attempt in range(1, SUMMARIZE_MAX_RETRIES + 1):
+        try:
+            response = litellm.completion(**completion_args)
+            summary = response.choices[0].message.content or ""
+            if not summary.strip():
+                return messages[0]
+            summary_msg = "<context_summary message_count='{count}'>{text}</context_summary>"
+            return {
+                "role": "user",
+                "content": summary_msg.format(count=len(messages), text=summary),
+            }
+        except (litellm.exceptions.Timeout, litellm.exceptions.APIConnectionError) as exc:
+            last_exc = exc
+            if attempt < SUMMARIZE_MAX_RETRIES:
+                logger.warning(
+                    "Summarize attempt %d/%d timed out, retrying in %.1fs...",
+                    attempt,
+                    SUMMARIZE_MAX_RETRIES,
+                    backoff,
+                )
+                time.sleep(backoff)
+                backoff *= 2
+            else:
+                logger.error(
+                    "Failed to summarize messages after %d attempts: %s",
+                    SUMMARIZE_MAX_RETRIES,
+                    exc,
+                )
+        except Exception:
+            logger.exception("Failed to summarize messages")
+            return messages[0]
+
+    if last_exc is not None:
+        logger.error("All summarize attempts failed: %s", last_exc)
+    return messages[0]
 ```
+
+Key points:
+- `role` is `"user"` (not `"assistant"`) in the success return
+- The outer `for` loop + inner `try/except` pattern must be preserved exactly
+- There is NO outer `try/except` wrapping the loop; only the inner ones inside the loop
+- `time` must be imported at the top of the file
 
 #### 5h. `strix/interface/main.py` — Copilot auth flow
 
@@ -212,25 +295,54 @@ Check that fork-specific tests still reference the correct symbols. Common issue
 - `strix.llm.memory_compressor.Config.get` → may become `strix.llm.memory_compressor.resolve_llm_config`
 - `strix.interface.main.check_container_runtime_installed` → may become `strix.interface.main.check_docker_installed`
 
-### 7. Run tests
+Also check for behavioral changes:
+
+- **`test_non_copilot_appends_meta_continue_when_last_is_assistant`** in `tests/llm/test_copilot.py`:
+  Since v0.8.1, upstream appends `<meta>Continue the task.</meta>` for ALL models when the
+  last message is `assistant`. If upstream ever removes that general fallback, this test and
+  the `if/elif` structure in `_prepare_messages()` must both be updated.
+
+### 7. Verify fragile merge points
+
+Before running the full test suite, do a quick syntax check on the two most fragile files:
+
+```bash
+poetry run python -c "import strix.llm.memory_compressor; print('memory_compressor OK')"
+poetry run python -c "import strix.llm.llm; print('llm OK')"
+```
+
+If either fails with a `SyntaxError`, the merge mangled that file. See sections 5e and 5g
+for the exact expected structure.
+
+### 8. Run tests
 
 ```bash
 poetry run python -m pytest tests/ -x --tb=short
 ```
 
-### 8. Commit the restorations
+### 9. Commit the restorations
 
 ```bash
 git add -A
 git commit -m "Restore fork-specific Copilot/Podman/FreeBSD features after upstream merge"
 ```
 
-### 9. Verify
+### 10. Verify
 
 ```bash
 git log --oneline --graph -10
 git diff upstream/main --stat  # should only show fork additions
 ```
+
+## Known fragile merge points
+
+These files are consistently mangled by `--strategy-option theirs` and require careful
+inspection after every merge:
+
+| File | Why fragile | What to check |
+|------|-------------|---------------|
+| `strix/llm/memory_compressor.py` | Fork wraps `litellm.completion` in a retry loop; upstream uses a simple `try/except`. The merge leaves orphaned `except` blocks outside the loop and sometimes changes `role` from `"user"` to `"assistant"`. | Verify the full function structure matches section 5g exactly. Run the syntax check from section 7. |
+| `strix/llm/llm.py` | Fork's Copilot `"Continue."` check and upstream's general `<meta>Continue the task.</meta>` check both touch the same lines in `_prepare_messages()`. The merge collapses them into the upstream version only. | Verify the `if/elif` structure from section 5e is present, not two separate `if` blocks. |
 
 ## Files unique to our fork (should never be deleted by merge)
 
