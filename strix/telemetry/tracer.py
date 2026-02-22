@@ -40,6 +40,7 @@ class Tracer:
 
         self.vulnerability_reports: list[dict[str, Any]] = []
         self.final_scan_result: str | None = None
+        self.model_name: str | None = None
 
         self.scan_results: dict[str, Any] | None = None
         self.scan_config: dict[str, Any] | None = None
@@ -281,9 +282,20 @@ class Tracer:
                 with penetration_test_report_file.open("w", encoding="utf-8") as f:
                     f.write("# Security Penetration Test Report\n\n")
                     f.write(
-                        f"**Generated:** {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}\n\n"
+                        f"**Generated:** {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
                     )
-                    f.write(f"{self.final_scan_result}\n")
+                    if self.model_name:
+                        f.write(f"**Model:** {self.model_name}\n")
+                    llm_stats = self.get_total_llm_stats()
+                    total = llm_stats["total"]
+                    if total["input_tokens"] > 0 or total["output_tokens"] > 0:
+                        f.write(
+                            f"<!-- Tokens: input={total['input_tokens']}"
+                            f" cached={total['cached_tokens']}"
+                            f" output={total['output_tokens']}"
+                            f" cost={total['cost']} -->\n"
+                        )
+                    f.write(f"\n{self.final_scan_result}\n")
                 logger.info(
                     f"Saved final penetration test report to: {penetration_test_report_file}"
                 )

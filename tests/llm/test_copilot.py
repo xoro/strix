@@ -214,7 +214,9 @@ class TestBuildCompletionArgsIncludesHeaders:
 
 class TestDedupePassesCopilotHeaders:
     @patch("strix.llm.dedupe.litellm.completion")
-    @patch("strix.llm.dedupe.resolve_llm_config", return_value=("github_copilot/gpt-4o", None, None))
+    @patch(
+        "strix.llm.dedupe.resolve_llm_config", return_value=("github_copilot/gpt-4o", None, None)
+    )
     def test_copilot_model_sends_headers(self, mock_resolve, mock_completion) -> None:
         mock_response = type(
             "Resp",

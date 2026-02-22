@@ -85,6 +85,7 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
         agent_config["local_sources"] = args.local_sources
 
     tracer = Tracer(args.run_name)
+    tracer.model_name = llm_config.model_name
     tracer.set_scan_config(scan_config)
 
     def display_vulnerability(report: dict[str, Any]) -> None:
