@@ -134,7 +134,7 @@ def _summarize_messages(
                 return messages[0]
             summary_msg = "<context_summary message_count='{count}'>{text}</context_summary>"
             return {
-                "role": "assistant",
+                "role": "user",
                 "content": summary_msg.format(count=len(messages), text=summary),
             }
         except (litellm.exceptions.Timeout, litellm.exceptions.APIConnectionError) as exc:
@@ -157,14 +157,10 @@ def _summarize_messages(
         except Exception:
             logger.exception("Failed to summarize messages")
             return messages[0]
-        summary_msg = "<context_summary message_count='{count}'>{text}</context_summary>"
-        return {
-            "role": "user",
-            "content": summary_msg.format(count=len(messages), text=summary),
-        }
-    except Exception:
-        logger.exception("Failed to summarize messages")
-        return messages[0]
+
+    if last_exc is not None:
+        logger.error("All summarize attempts failed: %s", last_exc)
+    return messages[0]
 
 
 def _handle_images(messages: list[dict[str, Any]], max_images: int) -> None:

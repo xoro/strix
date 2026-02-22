@@ -370,15 +370,15 @@ class TestPrepareMessagesCopilotFix:
         assert messages[-1]["role"] == "user"
         assert messages[-1]["content"] != "Continue."
 
-    def test_non_copilot_no_append_even_with_assistant_last(self) -> None:
+    def test_non_copilot_appends_meta_continue_when_last_is_assistant(self) -> None:
         llm = self._make_llm("openai/gpt-4o")
         history = [
             {"role": "user", "content": "Scan the target"},
             {"role": "assistant", "content": "I found some issues."},
         ]
         messages = llm._prepare_messages(history)
-        assert messages[-1]["role"] == "assistant"
-        assert messages[-1]["content"] == "I found some issues."
+        assert messages[-1]["role"] == "user"
+        assert messages[-1]["content"] == "<meta>Continue the task.</meta>"
 
     def test_copilot_appends_continue_when_last_is_system(self) -> None:
         """Edge case: if somehow conversation has only system message."""
