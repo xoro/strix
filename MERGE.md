@@ -7,19 +7,20 @@ This document describes how to merge the upstream [usestrix/strix](https://githu
 Our fork adds several features on top of upstream:
 
 - **GitHub Copilot LLM integration** (`strix/llm/copilot.py`)
-- **Podman container runtime** (`strix/strix/runtime/podman_runtime.py`)
+- **Podman container runtime** (`strix/runtime/podman_runtime.py`)
 - **FreeBSD platform support** (platform markers in `pyproject.toml`, auto-detection in `config.py`)
 - **Copilot authentication flow** (functions in `strix/interface/main.py`, CLI flag `--auth-github-copilot`)
 - **Copilot/Podman tests** (`tests/llm/test_copilot.py`, `tests/interface/test_github_copilot_auth.py`)
 
 ## Prerequisites
 
-The upstream remote should already be configured:
+The **upstream** remote should point at `usestrix/strix`. **origin** is usually your GitHub fork (and optionally a **gitlab** remote for the old GitLab clone):
 
 ```bash
 git remote -v
-# origin    git@gitlab.pallach.de:stoicism/strix.git
+# origin    git@github.com:<you>/strix.git
 # upstream  https://github.com/usestrix/strix.git
+# gitlab    git@gitlab.pallach.de:stoicism/strix.git   # optional
 ```
 
 If `upstream` is missing:
@@ -27,6 +28,8 @@ If `upstream` is missing:
 ```bash
 git remote add upstream https://github.com/usestrix/strix.git
 ```
+
+**Tooling:** Upstream migrated from Poetry to **uv** (`uv.lock`, `Makefile` uses `uv sync` / `uv run`). Use `uv run …` below, not `poetry run …`.
 
 ## Merge Steps
 
@@ -69,24 +72,25 @@ git commit  # only if the merge wasn't committed yet
 
 The merge with `--strategy-option theirs` overwrites our customizations in shared files. The following must be manually restored after every merge.
 
+Upstream uses **PEP 621** (`[project]` / `[dependency-groups]`) and **`uv.lock`**, not `[tool.poetry]`. Edit the **`dependencies`** array under **`[project]`**.
+
 #### 5a. `pyproject.toml` — Podman dependency & Docker platform marker
 
-Replace:
+Ensure a single unpinned `docker` line is **not** used on every platform. In **`[project]` → `dependencies`**, use environment markers (same idea as Poetry markers):
+
 ```toml
-docker = "^7.1.0"
+  "docker>=7.1.0; sys_platform != 'freebsd'",
+  "podman>=5.0.0; sys_platform == 'freebsd'",
 ```
 
-With:
-```toml
-docker = {version = "^7.1.0", markers = "sys_platform != 'freebsd'"}
-podman = {version = "^5.0.0", markers = "sys_platform == 'freebsd'"}
-```
+Add to mypy `[[tool.mypy.overrides]]` → `module` list (merge with upstream’s third-party stubs — do not drop upstream entries such as `opentelemetry.*`, `scrubadub.*`, `traceloop.*`):
 
-Add to mypy `[[tool.mypy.overrides]]` module list:
 ```toml
     "docker.*",
     "podman.*",
 ```
+
+After edits, refresh the lockfile: `uv lock` (or `uv sync`), then commit `uv.lock` if it changed.
 
 #### 5b. `strix/config/config.py` — FreeBSD runtime auto-detection
 
@@ -164,19 +168,19 @@ Restore three things:
 
 4. **"Continue." message** in `_prepare_messages()` (before the Anthropic cache control check).
 
-   **CRITICAL:** Since v0.8.1 upstream adds a general `<meta>Continue the task.</meta>` for
-   all models when the last message is `assistant`. The Copilot branch MUST be an `if/elif`
-   pair with that general check — NOT two separate `if` blocks:
+   **CRITICAL:** Upstream adds `<meta>Continue the task.</meta>` when the last message is
+   `assistant`, but only in **non-interactive** mode (`not self.config.interactive`). The
+   Copilot branch MUST be an `if/elif` with that check — NOT two separate `if` blocks:
 
    ```python
    if self._is_copilot() and messages and messages[-1].get("role") != "user":
        messages.append({"role": "user", "content": "Continue."})
-   elif messages[-1].get("role") == "assistant":
+   elif messages[-1].get("role") == "assistant" and not self.config.interactive:
        messages.append({"role": "user", "content": "<meta>Continue the task.</meta>"})
    ```
 
-   Replace the upstream-only `if messages[-1].get("role") == "assistant":` block with the
-   `if/elif` above. Using two separate `if` blocks will double-append for Copilot models.
+   Replace any upstream-only `if messages[-1].get("role") == "assistant":` (without the
+   interactive guard) with the `elif` above. Using two separate `if` blocks will double-append for Copilot models.
 
 #### 5f. `strix/llm/dedupe.py` — Copilot headers
 
@@ -298,17 +302,17 @@ Check that fork-specific tests still reference the correct symbols. Common issue
 Also check for behavioral changes:
 
 - **`test_non_copilot_appends_meta_continue_when_last_is_assistant`** in `tests/llm/test_copilot.py`:
-  Since v0.8.1, upstream appends `<meta>Continue the task.</meta>` for ALL models when the
-  last message is `assistant`. If upstream ever removes that general fallback, this test and
-  the `if/elif` structure in `_prepare_messages()` must both be updated.
+  Upstream appends `<meta>Continue the task.</meta>` when the last message is `assistant`
+  **and** the session is non-interactive. If upstream changes that condition, update this test
+  and the `if/elif` structure in `_prepare_messages()` together.
 
 ### 7. Verify fragile merge points
 
 Before running the full test suite, do a quick syntax check on the two most fragile files:
 
 ```bash
-poetry run python -c "import strix.llm.memory_compressor; print('memory_compressor OK')"
-poetry run python -c "import strix.llm.llm; print('llm OK')"
+uv run python -c "import strix.llm.memory_compressor; print('memory_compressor OK')"
+uv run python -c "import strix.llm.llm; print('llm OK')"
 ```
 
 If either fails with a `SyntaxError`, the merge mangled that file. See sections 5e and 5g
@@ -317,7 +321,7 @@ for the exact expected structure.
 ### 8. Run tests
 
 ```bash
-poetry run python -m pytest tests/ -x --tb=short
+uv run pytest tests/ -x --tb=short
 ```
 
 ### 9. Commit the restorations
@@ -342,7 +346,7 @@ inspection after every merge:
 | File | Why fragile | What to check |
 |------|-------------|---------------|
 | `strix/llm/memory_compressor.py` | Fork wraps `litellm.completion` in a retry loop; upstream uses a simple `try/except`. The merge leaves orphaned `except` blocks outside the loop and sometimes changes `role` from `"user"` to `"assistant"`. | Verify the full function structure matches section 5g exactly. Run the syntax check from section 7. |
-| `strix/llm/llm.py` | Fork's Copilot `"Continue."` check and upstream's general `<meta>Continue the task.</meta>` check both touch the same lines in `_prepare_messages()`. The merge collapses them into the upstream version only. | Verify the `if/elif` structure from section 5e is present, not two separate `if` blocks. |
+| `strix/llm/llm.py` | Fork's Copilot `"Continue."` check and upstream's `<meta>Continue the task.</meta>` (non-interactive) check both touch the same lines in `_prepare_messages()`. The merge collapses them into the upstream version only. | Verify the `if/elif` from section 5e is present (including `not self.config.interactive`), not two separate `if` blocks. |
 
 ## Files unique to our fork (should never be deleted by merge)
 
@@ -352,8 +356,9 @@ inspection after every merge:
 | `strix/runtime/podman_runtime.py` | Podman container runtime |
 | `tests/llm/test_copilot.py` | Copilot integration tests |
 | `tests/interface/test_github_copilot_auth.py` | Copilot auth tests |
-| `AGENTS.md` | AI agent coding guide |
-| `MERGE.md` | This file |
+| `MERGE.md` | This maintenance guide (not in upstream) |
+
+Upstream also ships `AGENTS.md`; keep any **local** edits in sync manually if you maintain a fork-specific copy.
 
 ## Merge history
 
@@ -362,3 +367,4 @@ inspection after every merge:
 | 2026-02-20 | v0.8.0 | Initial merge. Upstream refactored LLM config to `resolve_llm_config()`, removed `strix/cli/` directory. |
 | 2026-02-20 | — (post-merge fix) | Added retry with exponential backoff to `memory_compressor.py` `_summarize_messages()`. Increased default timeout from 30s to 120s. Wired up the previously unused `SUMMARIZE_MAX_RETRIES` / `SUMMARIZE_INITIAL_BACKOFF` constants. Fixes repeated `litellm.Timeout` errors during CI runs with Copilot. |
 | 2026-02-22 | v0.8.1 | Upstream added `normalize_tool_format` / `resolve_strix_model` utilities, centralized strix model resolution with separate API and capability names (`litellm_model` / `canonical_model` in `LLMConfig`), fixed tool-call tag parsing, added `<meta>Continue the task.</meta>` fallback for all models when last message is assistant. Restored all fork-specific Copilot/Podman/FreeBSD changes. Fixed merge-mangled `_summarize_messages()` (orphaned except block + wrong `role: assistant`). Updated `test_non_copilot_no_append_even_with_assistant_last` → `test_non_copilot_appends_meta_continue_when_last_is_assistant` to reflect new upstream behaviour. |
+| 2026-04 | v0.8.3+ (upstream uv) | Upstream migrated to **uv** (`uv.lock`, hatchling, `[project]` deps). Integrated fork on GitHub (`xoro/strix`); merge conflicts resolved with PEP 621 dependency strings for docker/podman, `strix_image` 0.1.13, and `_prepare_messages()` Copilot + **non-interactive** meta-continue `elif`. |
