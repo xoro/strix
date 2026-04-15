@@ -5482,7 +5482,7 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
-    { name = "ruff" },
+    { name = "ruff", marker = "platform_system != 'FreeBSD'" },
 ]
 
 [package.metadata]
@@ -5534,7 +5534,7 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=1.0.0" },
     { name = "pytest-cov", specifier = ">=6.1.1" },
     { name = "pytest-mock", specifier = ">=3.14.1" },
-    { name = "ruff", specifier = ">=0.11.13" },
+    { name = "ruff", marker = "platform_system != 'FreeBSD'", specifier = ">=0.11.13" },
 ]
 
 [[package]]

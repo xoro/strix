@@ -66,13 +66,13 @@ Install the following **before** cloning the repository. Every OS needs **Python
 | **uv** | **Astral:** one-line install from [uv installation](https://docs.astral.sh/uv/getting-started/installation/) (typically `curl -LsSf https://astral.sh/uv/install.sh` piped to `sh`). **Or** use packages: `sudo pkg install -y uv` when your repositories provide it (version may lag the installer). |
 | **Git** | `sudo pkg install -y git` |
 | **Podman** | `sudo pkg install -y podman` — configure and start Podman per [Podman on FreeBSD](https://podman.io/). This fork defaults to **Podman** on FreeBSD (`strix/config/config.py`); use `STRIX_RUNTIME_BACKEND=podman` if you need to force it. Confirm with `podman info`. |
-| **GNU make (`gmake`)** | **Only if** you install **development** dependencies (`make setup-dev` / `uv sync` with dev tools). Building **ruff** from source runs `gmake` while compiling **jemalloc**; without it you get `failed to execute command` / “No such file or directory” when `gmake` is missing. Install: `sudo pkg install -y gmake`. **Not needed** for a minimal CLI install — use `make install` or `uv sync --no-dev` (see below). |
+| **GNU make (`gmake`)** | **If** you build **ruff** from source (for example after re-adding it to dev dependencies), the **jemalloc** step may invoke **`gmake`**. Without it you can see `failed to execute command` / “No such file or directory”. Install: `sudo pkg install -y gmake`. The default **dev** dependency set on **FreeBSD omits `ruff`** (see below) to avoid huge Rust builds on small hosts, so **`gmake`** is often unnecessary for `uv sync` on FreeBSD. **Not needed** for a minimal CLI install — use `make install` or `uv sync --no-dev`. |
 
 ### Clone and install dependencies
 
 **FreeBSD — two paths:**
 
-1. **Run Strix only (recommended on FreeBSD)** — production dependencies only; skips **ruff**, **pytest**, and other dev tools that may need long source builds. You still need **Rust** for packages like **`pydantic-core`** (see table above).
+1. **Run Strix only (recommended on FreeBSD)** — production dependencies only; skips **pytest**, **mypy**, and other dev-only tools. You still need **Rust** for packages like **`pydantic-core`** (see table above).
 
    ```bash
    git clone https://github.com/xoro/strix.git
@@ -81,7 +81,7 @@ Install the following **before** cloning the repository. Every OS needs **Python
    # same as: uv sync --no-dev
    ```
 
-2. **Full developer setup** (linters, tests, pre-commit) — install **Rust** and **`gmake`** (spelled **`gmake`**, not `gmak`), then:
+2. **Full developer setup** (tests, pre-commit, type-checking) — install **Rust** first. **`gmake`** is only needed if you build tools that require it (see table). Then:
 
    ```bash
    git clone https://github.com/xoro/strix.git
@@ -90,7 +90,7 @@ Install the following **before** cloning the repository. Every OS needs **Python
    # equivalent: uv sync && uv run pre-commit install
    ```
 
-   **PyInstaller** is omitted on FreeBSD in `pyproject.toml` (no wheels; bootloader builds are unreliable). Use **GitHub Actions** / another OS to produce release binaries (`scripts/build.sh`).
+   **`ruff`** and **PyInstaller** are omitted on FreeBSD in `pyproject.toml`: there are no **ruff** wheels on PyPI for FreeBSD, and building it from source is a large **Rust/maturin** compile that often hits **OOM (SIGKILL)** on small **ARM64** VPS hosts. **`make format`** and **`make lint`** use `uv run ruff`; on FreeBSD they will fail unless you install **ruff** some other way or run those targets on **Linux/macOS/Windows** or **CI**. **PyInstaller** has no reliable FreeBSD story; use **GitHub Actions** / another OS to produce release binaries (`scripts/build.sh`).
 
 **Other platforms** — typical flow:
 
@@ -157,9 +157,11 @@ uv run strix -n --target https://example.com --scan-mode quick
 | `uv` not found | Install [uv](https://docs.astral.sh/uv/) and ensure it is on your `PATH`, or invoke it with an absolute path. |
 | FreeBSD: Docker expected | Use Podman and this fork’s defaults, or set `STRIX_RUNTIME_BACKEND=podman`. |
 | FreeBSD: `pydantic-core`, `maturin`, “Unsupported platform”, or “Rust not found” during `uv sync` | Install a **system Rust** toolchain so source builds can compile (see **Rust** row under FreeBSD prerequisites). Ensure `rustc` is on `PATH` in the same shell, then run `uv sync` again. |
-| FreeBSD: `ruff` / `tikv-jemalloc-sys` / `failed to execute command` / `gmake` during dev install | Prefer **`make install`** or **`uv sync --no-dev`** if you only need the CLI. If you need dev tools (`make setup-dev`), install **GNU make**: `sudo pkg install -y gmake` (note spelling **`gmake`**), ensure `gmake` is on `PATH`, then retry. |
+| FreeBSD: `ruff` build **`signal: 9 (SIGKILL)`** / **maturin** / **cargo** OOM | Usually **out of memory** while compiling **ruff** from source (common on **ARM64** with little RAM). This tree **excludes `ruff` from dev dependencies on FreeBSD** so `uv sync` does not pull it. **`git pull`**, run **`uv sync`** again, and use **`make install`** / **`uv sync --no-dev`** if you only need the CLI. To use **ruff** anyway, add swap/RAM, try **`CARGO_BUILD_JOBS=1`**, or run **format/lint** on another OS / CI. |
+| FreeBSD: `ruff` / `tikv-jemalloc-sys` / `failed to execute command` / `gmake` during dev install | If you **re-add** **ruff** or hit **jemalloc** in another package: install **GNU make**: `sudo pkg install -y gmake` (spelled **`gmake`**, not `gmak`), ensure `gmake` is on `PATH`, then retry. Otherwise prefer the default tree that **omits ruff** on FreeBSD. |
 | FreeBSD: `pkg: No packages available … gmak` | The package is **`gmake`**: `sudo pkg install -y gmake`. |
 | FreeBSD: **PyInstaller** / bootloader / `ieeefp.h` / `__BEGIN_DECLS` during `uv sync` | Current trees skip PyInstaller on FreeBSD. **`git pull`** and run **`uv sync`** again. Release binaries are built on CI / non-FreeBSD hosts. |
+| FreeBSD: **pre-commit** / **ruff** hooks fail | The **ruff-pre-commit** hooks expect a supported platform binary. Skip them for one commit: `SKIP=ruff-lint,ruff-format git commit …`, or rely on **CI** for lint/format. |
 
 ---
 
