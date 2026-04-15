@@ -39,6 +39,7 @@ from strix.interface.utils import (  # noqa: E402
     image_exists,
     infer_target_type,
     process_pull_line,
+    resolve_diff_scope_context,
     rewrite_localhost_targets,
     validate_config_file,
     validate_llm_response,
@@ -257,7 +258,7 @@ def validate_environment() -> None:  # noqa: PLR0912, PLR0915
                 error_text.append("• ", style="white")
                 error_text.append("STRIX_LLM", style="bold cyan")
                 error_text.append(
-                    " - Model name to use with litellm (e.g., 'openai/gpt-5')\n",
+                    " - Model name to use with litellm (e.g., 'openai/gpt-5.4')\n",
                     style="white",
                 )
 
@@ -296,10 +297,7 @@ def validate_environment() -> None:  # noqa: PLR0912, PLR0915
                     )
 
         error_text.append("\nExample setup:\n", style="white")
-        if uses_strix_models:
-            error_text.append("export STRIX_LLM='strix/gpt-5'\n", style="dim white")
-        else:
-            error_text.append("export STRIX_LLM='openai/gpt-5'\n", style="dim white")
+        error_text.append("export STRIX_LLM='openai/gpt-5.4'\n", style="dim white")
 
         if missing_optional_vars:
             for var in missing_optional_vars:
@@ -585,6 +583,28 @@ Examples:
     )
 
     parser.add_argument(
+        "--scope-mode",
+        type=str,
+        choices=["auto", "diff", "full"],
+        default="auto",
+        help=(
+            "Scope mode for code targets: "
+            "'auto' enables PR diff-scope in CI/headless runs, "
+            "'diff' forces changed-files scope, "
+            "'full' disables diff-scope."
+        ),
+    )
+
+    parser.add_argument(
+        "--diff-base",
+        type=str,
+        help=(
+            "Target branch or commit to compare against (e.g., origin/main). "
+            "Defaults to the repository's default branch."
+        ),
+    )
+
+    parser.add_argument(
         "--config",
         type=str,
         help="Path to a custom config file (JSON) to use instead of ~/.strix/cli-config.json",
@@ -643,8 +663,6 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
     if tracer and tracer.scan_results:
         scan_completed = tracer.scan_results.get("scan_completed", False)
 
-    has_vulnerabilities = tracer and len(tracer.vulnerability_reports) > 0
-
     completion_text = Text()
     if scan_completed:
         completion_text.append("Penetration test completed", style="bold #22c55e")
@@ -669,13 +687,12 @@ def display_completion_message(args: argparse.Namespace, results_path: Path) -> 
     if stats_text.plain:
         panel_parts.extend(["\n", stats_text])
 
-    if scan_completed or has_vulnerabilities:
-        results_text = Text()
-        results_text.append("\n")
-        results_text.append("Output", style="dim")
-        results_text.append("  ")
-        results_text.append(str(results_path), style="#60a5fa")
-        panel_parts.extend(["\n", results_text])
+    results_text = Text()
+    results_text.append("\n")
+    results_text.append("Output", style="dim")
+    results_text.append("  ")
+    results_text.append(str(results_path), style="#60a5fa")
+    panel_parts.extend(["\n", results_text])
 
     panel_content = Text.assemble(*panel_parts)
 
@@ -750,7 +767,7 @@ def persist_config() -> None:
         save_current_config()
 
 
-def main() -> None:
+def main() -> None:  # noqa: PLR0912, PLR0915
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -781,6 +798,38 @@ def main() -> None:
             target_info["details"]["cloned_repo_path"] = cloned_path
 
     args.local_sources = collect_local_sources(args.targets_info)
+    try:
+        diff_scope = resolve_diff_scope_context(
+            local_sources=args.local_sources,
+            scope_mode=args.scope_mode,
+            diff_base=args.diff_base,
+            non_interactive=args.non_interactive,
+        )
+    except ValueError as e:
+        console = Console()
+        error_text = Text()
+        error_text.append("DIFF SCOPE RESOLUTION FAILED", style="bold red")
+        error_text.append("\n\n", style="white")
+        error_text.append(str(e), style="white")
+
+        panel = Panel(
+            error_text,
+            title="[bold white]STRIX",
+            title_align="left",
+            border_style="red",
+            padding=(1, 2),
+        )
+        console.print("\n")
+        console.print(panel)
+        console.print()
+        sys.exit(1)
+
+    args.diff_scope = diff_scope.metadata
+    if diff_scope.instruction_block:
+        if args.instruction:
+            args.instruction = f"{diff_scope.instruction_block}\n\n{args.instruction}"
+        else:
+            args.instruction = diff_scope.instruction_block
 
     is_whitebox = bool(args.local_sources)
 

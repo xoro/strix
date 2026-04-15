@@ -117,6 +117,8 @@ class ListNotesRenderer(BaseToolRenderer):
                     title = note.get("title", "").strip() or "(untitled)"
                     category = note.get("category", "general")
                     note_content = note.get("content", "").strip()
+                    if not note_content:
+                        note_content = note.get("content_preview", "").strip()
 
                     text.append("\n  - ")
                     text.append(title)
@@ -125,6 +127,38 @@ class ListNotesRenderer(BaseToolRenderer):
                     if note_content:
                         text.append("\n    ")
                         text.append(note_content, style="dim")
+        else:
+            text.append("\n  ")
+            text.append("Loading...", style="dim")
+
+        css_classes = cls.get_css_classes("completed")
+        return Static(text, classes=css_classes)
+
+
+@register_tool_renderer
+class GetNoteRenderer(BaseToolRenderer):
+    tool_name: ClassVar[str] = "get_note"
+    css_classes: ClassVar[list[str]] = ["tool-call", "notes-tool"]
+
+    @classmethod
+    def render(cls, tool_data: dict[str, Any]) -> Static:
+        result = tool_data.get("result")
+
+        text = Text()
+        text.append("◇ ", style="#fbbf24")
+        text.append("note read", style="dim")
+
+        if result and isinstance(result, dict) and result.get("success"):
+            note = result.get("note", {}) or {}
+            title = str(note.get("title", "")).strip() or "(untitled)"
+            category = note.get("category", "general")
+            content = str(note.get("content", "")).strip()
+            text.append("\n  ")
+            text.append(title)
+            text.append(f" ({category})", style="dim")
+            if content:
+                text.append("\n  ")
+                text.append(content, style="dim")
         else:
             text.append("\n  ")
             text.append("Loading...", style="dim")

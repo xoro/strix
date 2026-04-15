@@ -1,5 +1,6 @@
 import threading
 from datetime import UTC, datetime
+import re
 from typing import Any, Literal
 
 from strix.tools.registry import register_tool
@@ -18,7 +19,187 @@ _running_agents: dict[str, threading.Thread] = {}
 
 _agent_instances: dict[str, Any] = {}
 
+_agent_llm_stats_lock = threading.Lock()
+
+
+def _empty_llm_stats_totals() -> dict[str, int | float]:
+    return {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cached_tokens": 0,
+        "cost": 0.0,
+        "requests": 0,
+    }
+
+
+_completed_agent_llm_totals: dict[str, int | float] = _empty_llm_stats_totals()
+
 _agent_states: dict[str, Any] = {}
+
+
+def _snapshot_agent_llm_stats(agent: Any) -> dict[str, int | float] | None:
+    if not hasattr(agent, "llm") or not hasattr(agent.llm, "_total_stats"):
+        return None
+
+    stats = agent.llm._total_stats
+    return {
+        "input_tokens": stats.input_tokens,
+        "output_tokens": stats.output_tokens,
+        "cached_tokens": stats.cached_tokens,
+        "cost": stats.cost,
+        "requests": stats.requests,
+    }
+
+
+def _finalize_agent_llm_stats(agent_id: str, agent: Any) -> None:
+    stats = _snapshot_agent_llm_stats(agent)
+    with _agent_llm_stats_lock:
+        if stats is not None:
+            _completed_agent_llm_totals["input_tokens"] += int(stats["input_tokens"])
+            _completed_agent_llm_totals["output_tokens"] += int(stats["output_tokens"])
+            _completed_agent_llm_totals["cached_tokens"] += int(stats["cached_tokens"])
+            _completed_agent_llm_totals["cost"] += float(stats["cost"])
+            _completed_agent_llm_totals["requests"] += int(stats["requests"])
+
+            node = _agent_graph["nodes"].get(agent_id)
+            if node is not None:
+                node["llm_stats"] = stats
+
+        _agent_instances.pop(agent_id, None)
+
+
+def _is_whitebox_agent(agent_id: str) -> bool:
+    agent = _agent_instances.get(agent_id)
+    return bool(getattr(getattr(agent, "llm_config", None), "is_whitebox", False))
+
+
+def _extract_repo_tags(agent_state: Any | None) -> set[str]:
+    repo_tags: set[str] = set()
+    if agent_state is None:
+        return repo_tags
+
+    task_text = str(getattr(agent_state, "task", "") or "")
+    for workspace_subdir in re.findall(r"/workspace/([A-Za-z0-9._-]+)", task_text):
+        repo_tags.add(f"repo:{workspace_subdir.lower()}")
+
+    for repo_name in re.findall(r"github\.com/[^/\s]+/([A-Za-z0-9._-]+)", task_text):
+        normalized = repo_name.removesuffix(".git").lower()
+        if normalized:
+            repo_tags.add(f"repo:{normalized}")
+
+    return repo_tags
+
+
+def _load_primary_wiki_note(agent_state: Any | None = None) -> dict[str, Any] | None:
+    try:
+        from strix.tools.notes.notes_actions import get_note, list_notes
+
+        notes_result = list_notes(category="wiki")
+        if not notes_result.get("success"):
+            return None
+
+        notes = notes_result.get("notes") or []
+        if not notes:
+            return None
+
+        selected_note_id = None
+        repo_tags = _extract_repo_tags(agent_state)
+        if repo_tags:
+            for note in notes:
+                note_tags = note.get("tags") or []
+                if not isinstance(note_tags, list):
+                    continue
+                normalized_note_tags = {str(tag).strip().lower() for tag in note_tags if str(tag).strip()}
+                if normalized_note_tags.intersection(repo_tags):
+                    selected_note_id = note.get("note_id")
+                    break
+
+        note_id = selected_note_id or notes[0].get("note_id")
+        if not isinstance(note_id, str) or not note_id:
+            return None
+
+        note_result = get_note(note_id=note_id)
+        if not note_result.get("success"):
+            return None
+
+        note = note_result.get("note")
+        if not isinstance(note, dict):
+            return None
+
+    except Exception:
+        return None
+    else:
+        return note
+
+
+def _inject_wiki_context_for_whitebox(agent_state: Any) -> None:
+    if not _is_whitebox_agent(agent_state.agent_id):
+        return
+
+    wiki_note = _load_primary_wiki_note(agent_state)
+    if not wiki_note:
+        return
+
+    title = str(wiki_note.get("title") or "repo wiki")
+    content = str(wiki_note.get("content") or "").strip()
+    if not content:
+        return
+
+    max_chars = 4000
+    truncated_content = content[:max_chars]
+    suffix = "\n\n[truncated for context size]" if len(content) > max_chars else ""
+    agent_state.add_message(
+        "user",
+        (
+            f"<shared_repo_wiki title=\"{title}\">\n"
+            f"{truncated_content}{suffix}\n"
+            "</shared_repo_wiki>"
+        ),
+    )
+
+
+def _append_wiki_update_on_finish(
+    agent_state: Any,
+    agent_name: str,
+    result_summary: str,
+    findings: list[str] | None,
+    final_recommendations: list[str] | None,
+) -> None:
+    if not _is_whitebox_agent(agent_state.agent_id):
+        return
+
+    try:
+        from strix.tools.notes.notes_actions import append_note_content
+
+        note = _load_primary_wiki_note(agent_state)
+        if not note:
+            return
+
+        note_id = note.get("note_id")
+        if not isinstance(note_id, str) or not note_id:
+            return
+
+        timestamp = datetime.now(UTC).isoformat()
+        summary = " ".join(str(result_summary).split())
+        if len(summary) > 1200:
+            summary = f"{summary[:1197]}..."
+        findings_lines = "\n".join(f"- {item}" for item in (findings or [])) or "- none"
+        recommendation_lines = (
+            "\n".join(f"- {item}" for item in (final_recommendations or [])) or "- none"
+        )
+
+        delta = (
+            f"\n\n## Agent Update: {agent_name} ({timestamp})\n"
+            f"Summary: {summary}\n\n"
+            "Findings:\n"
+            f"{findings_lines}\n\n"
+            "Recommendations:\n"
+            f"{recommendation_lines}\n"
+        )
+        append_note_content(note_id=note_id, delta=delta)
+    except Exception:
+        # Best-effort update; never block agent completion on note persistence.
+        return
 
 
 def _run_agent_in_thread(
@@ -31,6 +212,8 @@ def _run_agent_in_thread(
                 state.add_message(msg["role"], msg["content"])
             state.add_message("user", "</inherited_context_from_parent>")
 
+        _inject_wiki_context_for_whitebox(state)
+
         parent_info = _agent_graph["nodes"].get(state.parent_id, {})
         parent_name = parent_info.get("name", "Unknown Parent")
 
@@ -39,6 +222,18 @@ def _run_agent_in_thread(
             if inherited_messages
             else "started with a fresh context"
         )
+        wiki_memory_instruction = ""
+        if getattr(getattr(agent, "llm_config", None), "is_whitebox", False):
+            wiki_memory_instruction = (
+                '\n        - White-box memory (recommended): call list_notes(category="wiki") and then '
+                "get_note(note_id=...) before substantive work (including terminal scans)"
+                "\n        - Reuse one repo wiki note where possible and avoid duplicates"
+                "\n        - Before agent_finish, call list_notes(category=\"wiki\") + get_note(note_id=...) again, then append a short scope delta via update_note (new routes/sinks, scanner results, dynamic follow-ups)"
+                "\n        - If terminal output contains `command not found` or shell parse errors, correct and rerun before using the result"
+                "\n        - Use ASCII-only shell commands; if a command includes unexpected non-ASCII characters, rerun with a clean ASCII command"
+                "\n        - Keep AST artifacts bounded: target relevant paths and avoid whole-repo generic function dumps"
+                "\n        - Source-aware tooling is advisory: choose semgrep/AST/tree-sitter/gitleaks/trivy when relevant, do not force static steps for purely dynamic validation tasks"
+            )
 
         task_xml = f"""<agent_delegation>
     <identity>
@@ -64,6 +259,7 @@ def _run_agent_in_thread(
         - All agents share /workspace directory and proxy history for better collaboration
         - You can see files created by other agents and proxy traffic from previous work
         - Build upon previous work but focus on your specific delegated task
+{wiki_memory_instruction}
     </instructions>
 </agent_delegation>"""
 
@@ -87,7 +283,7 @@ def _run_agent_in_thread(
         _agent_graph["nodes"][state.agent_id]["finished_at"] = datetime.now(UTC).isoformat()
         _agent_graph["nodes"][state.agent_id]["result"] = {"error": str(e)}
         _running_agents.pop(state.agent_id, None)
-        _agent_instances.pop(state.agent_id, None)
+        _finalize_agent_llm_stats(state.agent_id, agent)
         raise
     else:
         if state.stop_requested:
@@ -97,7 +293,7 @@ def _run_agent_in_thread(
         _agent_graph["nodes"][state.agent_id]["finished_at"] = datetime.now(UTC).isoformat()
         _agent_graph["nodes"][state.agent_id]["result"] = result
         _running_agents.pop(state.agent_id, None)
-        _agent_instances.pop(state.agent_id, None)
+        _finalize_agent_llm_stats(state.agent_id, agent)
 
         return {"result": result}
 
@@ -195,58 +391,72 @@ def create_agent(
     try:
         parent_id = agent_state.agent_id
 
-        skill_list = []
-        if skills:
-            skill_list = [s.strip() for s in skills.split(",") if s.strip()]
+        from strix.skills import parse_skill_list, validate_requested_skills
 
-        if len(skill_list) > 5:
+        skill_list = parse_skill_list(skills)
+        validation_error = validate_requested_skills(skill_list)
+        if validation_error:
             return {
                 "success": False,
-                "error": (
-                    "Cannot specify more than 5 skills for an agent (use comma-separated format)"
-                ),
+                "error": validation_error,
                 "agent_id": None,
             }
-
-        if skill_list:
-            from strix.skills import get_all_skill_names, validate_skill_names
-
-            validation = validate_skill_names(skill_list)
-            if validation["invalid"]:
-                available_skills = list(get_all_skill_names())
-                return {
-                    "success": False,
-                    "error": (
-                        f"Invalid skills: {validation['invalid']}. "
-                        f"Available skills: {', '.join(available_skills)}"
-                    ),
-                    "agent_id": None,
-                }
 
         from strix.agents import StrixAgent
         from strix.agents.state import AgentState
         from strix.llm.config import LLMConfig
 
-        state = AgentState(task=task, agent_name=name, parent_id=parent_id, max_iterations=300)
-
         parent_agent = _agent_instances.get(parent_id)
 
         timeout = None
         scan_mode = "deep"
+        is_whitebox = False
+        interactive = False
         if parent_agent and hasattr(parent_agent, "llm_config"):
             if hasattr(parent_agent.llm_config, "timeout"):
                 timeout = parent_agent.llm_config.timeout
             if hasattr(parent_agent.llm_config, "scan_mode"):
                 scan_mode = parent_agent.llm_config.scan_mode
+            if hasattr(parent_agent.llm_config, "is_whitebox"):
+                is_whitebox = parent_agent.llm_config.is_whitebox
+            interactive = getattr(parent_agent.llm_config, "interactive", False)
 
-        llm_config = LLMConfig(skills=skill_list, timeout=timeout, scan_mode=scan_mode)
+        if is_whitebox:
+            whitebox_guidance = (
+                "\n\nWhite-box execution guidance (recommended when source is available):\n"
+                "- Use structural AST mapping (`sg` or `tree-sitter`) where it helps source analysis; "
+                "keep artifacts bounded and skip forced AST steps for purely dynamic validation tasks.\n"
+                "- Keep AST output bounded: scope to relevant paths/files, avoid whole-repo "
+                "generic function patterns, and cap artifact size.\n"
+                '- Use shared wiki memory by calling list_notes(category="wiki") then '
+                "get_note(note_id=...).\n"
+                '- Before agent_finish, call list_notes(category="wiki") + get_note(note_id=...) '
+                "again, reuse one repo wiki, and call update_note.\n"
+                "- If terminal output contains `command not found` or shell parse errors, "
+                "correct and rerun before using the result."
+            )
+            if "White-box execution guidance (recommended when source is available):" not in task:
+                task = f"{task.rstrip()}{whitebox_guidance}"
+
+        state = AgentState(
+            task=task,
+            agent_name=name,
+            parent_id=parent_id,
+            max_iterations=300,
+            waiting_timeout=300 if interactive else 600,
+        )
+        llm_config = LLMConfig(
+            skills=skill_list,
+            timeout=timeout,
+            scan_mode=scan_mode,
+            is_whitebox=is_whitebox,
+            interactive=interactive,
+        )
 
         agent_config = {
             "llm_config": llm_config,
             "state": state,
         }
-        if parent_agent and hasattr(parent_agent, "non_interactive"):
-            agent_config["non_interactive"] = parent_agent.non_interactive
 
         agent = StrixAgent(agent_config)
 
@@ -254,7 +464,8 @@ def create_agent(
         if inherit_context:
             inherited_messages = agent_state.get_conversation_history()
 
-        _agent_instances[state.agent_id] = agent
+        with _agent_llm_stats_lock:
+            _agent_instances[state.agent_id] = agent
 
         thread = threading.Thread(
             target=_run_agent_in_thread,
@@ -387,6 +598,14 @@ def agent_finish(
             "success": success,
             "recommendations": final_recommendations or [],
         }
+
+        _append_wiki_update_on_finish(
+            agent_state=agent_state,
+            agent_name=agent_node["name"],
+            result_summary=result_summary,
+            findings=findings,
+            final_recommendations=final_recommendations,
+        )
 
         parent_notified = False
 

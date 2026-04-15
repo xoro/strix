@@ -47,13 +47,18 @@ class Config:
     strix_disable_browser = "false"
 
     # Runtime Configuration
-    strix_image = "ghcr.io/usestrix/strix-sandbox:0.1.11"
+    strix_image = "ghcr.io/usestrix/strix-sandbox:0.1.13"
     strix_runtime_backend = _default_runtime_backend()
     strix_sandbox_execution_timeout = "120"
     strix_sandbox_connect_timeout = "10"
 
     # Telemetry
     strix_telemetry = "1"
+    strix_otel_telemetry = None
+    strix_posthog_telemetry = None
+    traceloop_base_url = None
+    traceloop_api_key = None
+    traceloop_headers = None
 
     # Config file override (set via --config CLI arg)
     _config_file_override: Path | None = None

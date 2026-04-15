@@ -43,7 +43,10 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
     results_text.append(f"strix_runs/{args.run_name}", style="#60a5fa")
 
     scan_mode = getattr(args, "scan_mode", "deep")
-    llm_config = LLMConfig(scan_mode=scan_mode)
+    llm_config = LLMConfig(
+        scan_mode=scan_mode,
+        is_whitebox=bool(getattr(args, "local_sources", [])),
+    )
 
     model_text = Text()
     model_text.append("Model ", style="dim")
@@ -80,11 +83,11 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
         "targets": args.targets_info,
         "user_instructions": args.instruction or "",
         "run_name": args.run_name,
+        "diff_scope": getattr(args, "diff_scope", {"active": False}),
     }
     agent_config = {
         "llm_config": llm_config,
         "max_iterations": 300,
-        "non_interactive": True,
     }
 
     if getattr(args, "local_sources", None):

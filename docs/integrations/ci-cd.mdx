@@ -13,6 +13,12 @@ Use the `-n` or `--non-interactive` flag:
 strix -n --target ./app --scan-mode quick
 ```
 
+For pull-request style CI runs, Strix automatically scopes quick scans to changed files. You can force this behavior and set a base ref explicitly:
+
+```bash
+strix -n --target ./app --scan-mode quick --scope-mode diff --diff-base origin/main
+```
+
 ## Exit Codes
 
 | Code | Meaning |
@@ -78,3 +84,7 @@ jobs:
 <Note>
 All CI platforms require Docker access. Ensure your runner has Docker available.
 </Note>
+
+<Tip>
+If diff-scope fails in CI, fetch full git history (for example, `fetch-depth: 0` in GitHub Actions) so merge-base and branch comparison can be resolved.
+</Tip>

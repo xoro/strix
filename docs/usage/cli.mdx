@@ -27,6 +27,14 @@ strix --target <target> [options]
   Scan depth: `quick`, `standard`, or `deep`.
 </ParamField>
 
+<ParamField path="--scope-mode" type="string" default="auto">
+  Code scope mode: `auto` (enable PR diff-scope in CI/headless runs), `diff` (force changed-files scope), or `full` (disable diff-scope).
+</ParamField>
+
+<ParamField path="--diff-base" type="string">
+  Target branch or commit to compare against (e.g., `origin/main`). Defaults to the repository's default branch.
+</ParamField>
+
 <ParamField path="--non-interactive, -n" type="boolean">
   Run in headless mode without TUI. Ideal for CI/CD.
 </ParamField>
@@ -49,6 +57,9 @@ strix --target api.example.com --instruction "Focus on IDOR and auth bypass"
 
 # CI/CD mode
 strix -n --target ./ --scan-mode quick
+
+# Force diff-scope against a specific base ref
+strix -n --target ./ --scan-mode quick --scope-mode diff --diff-base origin/main
 
 # Multi-target white-box testing
 strix -t https://github.com/org/app -t https://staging.example.com

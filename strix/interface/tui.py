@@ -18,7 +18,7 @@ from rich.align import Align
 from rich.console import Group
 from rich.panel import Panel
 from rich.style import Style
-from rich.text import Text
+from rich.text import Span, Text
 from textual import events, on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -252,10 +252,9 @@ class StopAgentScreen(ModalScreen):  # type: ignore[misc]
             event.prevent_default()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.app.pop_screen()
         if event.button.id == "stop_agent":
             self.app.action_confirm_stop_agent(self.agent_id)
-        else:
-            self.app.pop_screen()
 
 
 class VulnerabilityDetailScreen(ModalScreen):  # type: ignore[misc]
@@ -687,7 +686,7 @@ class StrixTUIApp(App):  # type: ignore[misc]
     CSS_PATH = "assets/tui_styles.tcss"
     ALLOW_SELECT = True
 
-    SIDEBAR_MIN_WIDTH = 140
+    SIDEBAR_MIN_WIDTH = 120
 
     selected_agent_id: reactive[str | None] = reactive(default=None)
     show_splash: reactive[bool] = reactive(default=True)
@@ -744,11 +743,16 @@ class StrixTUIApp(App):  # type: ignore[misc]
             "targets": args.targets_info,
             "user_instructions": args.instruction or "",
             "run_name": args.run_name,
+            "diff_scope": getattr(args, "diff_scope", {"active": False}),
         }
 
     def _build_agent_config(self, args: argparse.Namespace) -> dict[str, Any]:
         scan_mode = getattr(args, "scan_mode", "deep")
-        llm_config = LLMConfig(scan_mode=scan_mode)
+        llm_config = LLMConfig(
+            scan_mode=scan_mode,
+            interactive=True,
+            is_whitebox=bool(getattr(args, "local_sources", [])),
+        )
 
         config = {
             "llm_config": llm_config,
@@ -830,11 +834,11 @@ class StrixTUIApp(App):  # type: ignore[misc]
             agents_tree.guide_style = "dashed"
 
             stats_display = Static("", id="stats_display")
-            stats_display.ALLOW_SELECT = False
+            stats_scroll = VerticalScroll(stats_display, id="stats_scroll")
 
             vulnerabilities_panel = VulnerabilitiesPanel(id="vulnerabilities_panel")
 
-            sidebar = Vertical(agents_tree, vulnerabilities_panel, stats_display, id="sidebar")
+            sidebar = Vertical(agents_tree, vulnerabilities_panel, stats_scroll, id="sidebar")
 
             content_container.mount(chat_area_container)
             content_container.mount(sidebar)
@@ -1037,20 +1041,44 @@ class StrixTUIApp(App):  # type: ignore[misc]
             if i > 0:
                 combined.append("\n")
             StrixTUIApp._append_renderable(combined, item)
-        return combined
+        return StrixTUIApp._sanitize_text(combined)
+
+    @staticmethod
+    def _sanitize_text(text: Text) -> Text:
+        """Clamp spans so Rich/Textual can't crash on malformed offsets."""
+        plain = text.plain
+        text_length = len(plain)
+        sanitized_spans: list[Span] = []
+
+        for span in text.spans:
+            start = max(0, min(span.start, text_length))
+            end = max(0, min(span.end, text_length))
+            if end > start:
+                sanitized_spans.append(Span(start, end, span.style))
+
+        return Text(
+            plain,
+            style=text.style,
+            justify=text.justify,
+            overflow=text.overflow,
+            no_wrap=text.no_wrap,
+            end=text.end,
+            tab_size=text.tab_size,
+            spans=sanitized_spans,
+        )
 
     @staticmethod
     def _append_renderable(combined: Text, item: Any) -> None:
         """Recursively append a renderable's text content to a combined Text."""
         if isinstance(item, Text):
-            combined.append_text(item)
+            combined.append_text(StrixTUIApp._sanitize_text(item))
         elif isinstance(item, Group):
             for j, sub in enumerate(item.renderables):
                 if j > 0:
                     combined.append("\n")
                 StrixTUIApp._append_renderable(combined, sub)
         else:
-            inner = getattr(item, "renderable", None)
+            inner = getattr(item, "content", None) or getattr(item, "renderable", None)
             if inner is not None:
                 StrixTUIApp._append_renderable(combined, inner)
             else:
@@ -1088,7 +1116,7 @@ class StrixTUIApp(App):  # type: ignore[misc]
             return Text()
 
         if len(renderables) == 1 and isinstance(renderables[0], Text):
-            return renderables[0]
+            return self._sanitize_text(renderables[0])
 
         return self._merge_renderables(renderables)
 
@@ -1124,7 +1152,7 @@ class StrixTUIApp(App):  # type: ignore[misc]
         if not renderables:
             result = Text()
         elif len(renderables) == 1 and isinstance(renderables[0], Text):
-            result = renderables[0]
+            result = self._sanitize_text(renderables[0])
         else:
             result = self._merge_renderables(renderables)
 
@@ -1144,7 +1172,7 @@ class StrixTUIApp(App):  # type: ignore[misc]
         renderer = get_tool_renderer(tool_name)
         if renderer:
             widget = renderer.render(tool_data)
-            return widget.renderable
+            return widget.content
 
         return self._render_default_streaming_tool(tool_name, args, is_complete)
 
@@ -1273,6 +1301,9 @@ class StrixTUIApp(App):  # type: ignore[misc]
         if not self._is_widget_safe(stats_display):
             return
 
+        if self.screen.selections:
+            return
+
         stats_content = Text()
 
         stats_text = build_tui_stats_text(self.tracer, self.agent_config)
@@ -1282,15 +1313,7 @@ class StrixTUIApp(App):  # type: ignore[misc]
         version = get_package_version()
         stats_content.append(f"\nv{version}", style="white")
 
-        from rich.panel import Panel
-
-        stats_panel = Panel(
-            stats_content,
-            border_style="#333333",
-            padding=(0, 1),
-        )
-
-        self._safe_widget_operation(stats_display.update, stats_panel)
+        self._safe_widget_operation(stats_display.update, stats_content)
 
     def _update_vulnerabilities_panel(self) -> None:
         """Update the vulnerabilities panel with current vulnerability data."""
@@ -1687,7 +1710,7 @@ class StrixTUIApp(App):  # type: ignore[misc]
 
         if renderer:
             widget = renderer.render(tool_data)
-            return widget.renderable
+            return widget.content
 
         text = Text()
 
@@ -1918,8 +1941,6 @@ class StrixTUIApp(App):  # type: ignore[misc]
         return agent_name, False
 
     def action_confirm_stop_agent(self, agent_id: str) -> None:
-        self.pop_screen()
-
         try:
             from strix.tools.agents_graph.agents_graph_actions import stop_agent
 

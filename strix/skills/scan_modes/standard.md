@@ -15,12 +15,17 @@ Systematic testing across the full attack surface. Understand the application be
 
 **Whitebox (source available)**
 - Map codebase structure: modules, entry points, routing
+- Start by loading existing `wiki` notes (`list_notes(category="wiki")` then `get_note(note_id=...)`) and update one shared repo note as mapping evolves
+- Run `semgrep` first-pass triage to prioritize risky flows before deep manual review
+- Run at least one AST-structural mapping pass (`sg` and/or Tree-sitter), then use outputs for route, sink, and trust-boundary mapping
+- Keep AST output bounded to relevant paths and hypotheses; avoid whole-repo generic function dumps
 - Identify architecture pattern (MVC, microservices, monolith)
 - Trace input vectors: forms, APIs, file uploads, headers, cookies
 - Review authentication and authorization flows
 - Analyze database interactions and ORM usage
-- Check dependencies for known CVEs
+- Check dependencies and repo risks with `trivy fs`, `gitleaks`, and `trufflehog`
 - Understand the data model and sensitive data locations
+- Before completion, update the shared repo wiki with source findings summary and dynamic validation next steps
 
 **Blackbox (no source)**
 - Crawl application thoroughly, interact with every feature
