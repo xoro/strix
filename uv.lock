@@ -5467,7 +5467,7 @@ dependencies = [
     { name = "scrubadub" },
     { name = "tenacity" },
     { name = "textual" },
-    { name = "traceloop-sdk" },
+    { name = "traceloop-sdk", marker = "sys_platform != 'freebsd'" },
     { name = "xmltodict" },
 ]
 
@@ -5527,7 +5527,7 @@ requires-dist = [
     { name = "scrubadub", specifier = ">=2.0.1" },
     { name = "tenacity", specifier = ">=9.0.0" },
     { name = "textual", specifier = ">=6.0.0" },
-    { name = "traceloop-sdk", specifier = ">=0.53.0" },
+    { name = "traceloop-sdk", marker = "sys_platform != 'freebsd'", specifier = ">=0.53.0" },
     { name = "uvicorn", marker = "extra == 'sandbox'" },
     { name = "xmltodict", specifier = ">=0.13.0" },
 ]

@@ -43,7 +43,7 @@ dependencies = [
   "xmltodict>=0.13.0",
   "requests>=2.32.0",
   "cvss>=3.2",
-  "traceloop-sdk>=0.53.0",
+  "traceloop-sdk>=0.53.0; sys_platform != 'freebsd'",
   "opentelemetry-exporter-otlp-proto-http>=1.40.0",
   "scrubadub>=2.0.1",
   "defusedxml>=0.7.1",
