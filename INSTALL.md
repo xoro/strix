@@ -66,10 +66,31 @@ Install the following **before** cloning the repository. Every OS needs **Python
 | **uv** | Official installer: `curl -LsSf https://astral.sh/uv/install.sh | sh` — or install from ports/packages if your tree provides `uv`. |
 | **Git** | `sudo pkg install -y git` |
 | **Podman** | `sudo pkg install -y podman` — configure and start Podman per [Podman on FreeBSD](https://podman.io/). This fork defaults to **Podman** on FreeBSD (`strix/config/config.py`); use `STRIX_RUNTIME_BACKEND=podman` if you need to force it. Confirm with `podman info`. |
+| **GNU make (`gmake`)** | **Only if** you install **development** dependencies (`make setup-dev` / `uv sync` with dev tools). Building **ruff** from source runs `gmake` while compiling **jemalloc**; without it you get `failed to execute command` / “No such file or directory” when `gmake` is missing. Install: `sudo pkg install -y gmake`. **Not needed** for a minimal CLI install — use `make install` or `uv sync --no-dev` (see below). |
 
 ### Clone and install dependencies
 
-**FreeBSD:** install **Rust** (see prerequisites table) *before* the steps below so `uv sync` can build wheels that are missing for this platform (for example `pydantic-core`).
+**FreeBSD — two paths:**
+
+1. **Run Strix only (recommended on FreeBSD)** — production dependencies only; skips **ruff**, **pytest**, and other dev tools that may need long source builds. You still need **Rust** for packages like **`pydantic-core`** (see table above).
+
+   ```bash
+   git clone https://github.com/xoro/strix.git
+   cd strix
+   make install
+   # same as: uv sync --no-dev
+   ```
+
+2. **Full developer setup** (linters, tests, pre-commit) — install **Rust** and **`gmake`**, then:
+
+   ```bash
+   git clone https://github.com/xoro/strix.git
+   cd strix
+   make setup-dev
+   # equivalent: uv sync && uv run pre-commit install
+   ```
+
+**Other platforms** — typical flow:
 
 ```bash
 git clone https://github.com/xoro/strix.git
@@ -134,6 +155,7 @@ uv run strix -n --target https://example.com --scan-mode quick
 | `uv` not found | Install [uv](https://docs.astral.sh/uv/) and ensure it is on your `PATH`, or invoke it with an absolute path. |
 | FreeBSD: Docker expected | Use Podman and this fork’s defaults, or set `STRIX_RUNTIME_BACKEND=podman`. |
 | FreeBSD: `pydantic-core`, `maturin`, “Unsupported platform”, or “Rust not found” during `uv sync` | Install a **system Rust** toolchain so source builds can compile (see **Rust** row under FreeBSD prerequisites). Ensure `rustc` is on `PATH` in the same shell, then run `uv sync` again. |
+| FreeBSD: `ruff` / `tikv-jemalloc-sys` / `failed to execute command` / `gmake` during dev install | Prefer **`make install`** or **`uv sync --no-dev`** if you only need the CLI. If you need dev tools (`make setup-dev`), install **GNU make**: `sudo pkg install -y gmake`, ensure `gmake` is on `PATH`, then retry. |
 
 ---
 
