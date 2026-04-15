@@ -33,7 +33,9 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-  "litellm[proxy]>=1.81.1,<1.82.0",
+  # litellm[proxy] pulls pyroscope-io (no FreeBSD wheels). CLI uses the client API only.
+  "litellm[proxy]>=1.81.1,<1.82.0; sys_platform != 'freebsd'",
+  "litellm>=1.81.1,<1.82.0; sys_platform == 'freebsd'",
   "tenacity>=9.0.0",
   "pydantic[email]>=2.11.3",
   "rich",
