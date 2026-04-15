@@ -97,7 +97,8 @@ dev = [
   "pre-commit>=4.2.0",
   "black>=25.1.0",
   "isort>=6.0.1",
-  "pyinstaller>=6.17.0; python_version >= '3.12' and python_version < '3.15'",
+  # PyInstaller has no FreeBSD wheels; bootloader build often fails (e.g. ARM64). Release binaries use CI.
+  "pyinstaller>=6.17.0; python_version >= '3.12' and python_version < '3.15' and platform_system != 'FreeBSD'",
 ]
 
 [build-system]

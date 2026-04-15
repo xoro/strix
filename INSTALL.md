@@ -81,7 +81,7 @@ Install the following **before** cloning the repository. Every OS needs **Python
    # same as: uv sync --no-dev
    ```
 
-2. **Full developer setup** (linters, tests, pre-commit) — install **Rust** and **`gmake`**, then:
+2. **Full developer setup** (linters, tests, pre-commit) — install **Rust** and **`gmake`** (spelled **`gmake`**, not `gmak`), then:
 
    ```bash
    git clone https://github.com/xoro/strix.git
@@ -89,6 +89,8 @@ Install the following **before** cloning the repository. Every OS needs **Python
    make setup-dev
    # equivalent: uv sync && uv run pre-commit install
    ```
+
+   **PyInstaller** is omitted on FreeBSD in `pyproject.toml` (no wheels; bootloader builds are unreliable). Use **GitHub Actions** / another OS to produce release binaries (`scripts/build.sh`).
 
 **Other platforms** — typical flow:
 
@@ -155,7 +157,9 @@ uv run strix -n --target https://example.com --scan-mode quick
 | `uv` not found | Install [uv](https://docs.astral.sh/uv/) and ensure it is on your `PATH`, or invoke it with an absolute path. |
 | FreeBSD: Docker expected | Use Podman and this fork’s defaults, or set `STRIX_RUNTIME_BACKEND=podman`. |
 | FreeBSD: `pydantic-core`, `maturin`, “Unsupported platform”, or “Rust not found” during `uv sync` | Install a **system Rust** toolchain so source builds can compile (see **Rust** row under FreeBSD prerequisites). Ensure `rustc` is on `PATH` in the same shell, then run `uv sync` again. |
-| FreeBSD: `ruff` / `tikv-jemalloc-sys` / `failed to execute command` / `gmake` during dev install | Prefer **`make install`** or **`uv sync --no-dev`** if you only need the CLI. If you need dev tools (`make setup-dev`), install **GNU make**: `sudo pkg install -y gmake`, ensure `gmake` is on `PATH`, then retry. |
+| FreeBSD: `ruff` / `tikv-jemalloc-sys` / `failed to execute command` / `gmake` during dev install | Prefer **`make install`** or **`uv sync --no-dev`** if you only need the CLI. If you need dev tools (`make setup-dev`), install **GNU make**: `sudo pkg install -y gmake` (note spelling **`gmake`**), ensure `gmake` is on `PATH`, then retry. |
+| FreeBSD: `pkg: No packages available … gmak` | The package is **`gmake`**: `sudo pkg install -y gmake`. |
+| FreeBSD: **PyInstaller** / bootloader / `ieeefp.h` / `__BEGIN_DECLS` during `uv sync` | Current trees skip PyInstaller on FreeBSD. **`git pull`** and run **`uv sync`** again. Release binaries are built on CI / non-FreeBSD hosts. |
 
 ---
 

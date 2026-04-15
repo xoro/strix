@@ -4307,13 +4307,13 @@ name = "pyinstaller"
 version = "6.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "altgraph" },
+    { name = "altgraph", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
     { name = "macholib", marker = "platform_system != 'FreeBSD' and sys_platform == 'darwin'" },
-    { name = "packaging" },
+    { name = "packaging", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
     { name = "pefile", marker = "sys_platform == 'win32'" },
-    { name = "pyinstaller-hooks-contrib" },
+    { name = "pyinstaller-hooks-contrib", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
     { name = "pywin32-ctypes", marker = "sys_platform == 'win32'" },
-    { name = "setuptools" },
+    { name = "setuptools", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c8/63/fd62472b6371d89dc138d40c36d87a50dc2de18a035803bbdc376b4ffac4/pyinstaller-6.19.0.tar.gz", hash = "sha256:ec73aeb8bd9b7f2f1240d328a4542e90b3c6e6fbc106014778431c616592a865", size = 4036072, upload-time = "2026-02-14T18:06:28.718Z" }
 wheels = [
@@ -4335,8 +4335,8 @@ name = "pyinstaller-hooks-contrib"
 version = "2026.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "packaging" },
-    { name = "setuptools" },
+    { name = "packaging", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "setuptools", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/80/17/716326f6ba18d0663f7995ae369c23e50efebc22fbb054e9710a45688f61/pyinstaller_hooks_contrib-2026.3.tar.gz", hash = "sha256:800d3a198a49a6cd0de2d7fb795005fdca7a0222ed9cb47c0691abd1c27b9310", size = 172323, upload-time = "2026-03-09T22:44:06.345Z" }
 wheels = [
@@ -5475,7 +5475,7 @@ dev = [
     { name = "isort" },
     { name = "mypy" },
     { name = "pre-commit" },
-    { name = "pyinstaller", marker = "python_full_version < '3.15'" },
+    { name = "pyinstaller", marker = "python_full_version < '3.15' and platform_system != 'FreeBSD'" },
     { name = "pylint" },
     { name = "pyright" },
     { name = "pytest" },
@@ -5527,7 +5527,7 @@ dev = [
     { name = "isort", specifier = ">=6.0.1" },
     { name = "mypy", specifier = ">=1.16.0" },
     { name = "pre-commit", specifier = ">=4.2.0" },
-    { name = "pyinstaller", marker = "python_full_version >= '3.12' and python_full_version < '3.15'", specifier = ">=6.17.0" },
+    { name = "pyinstaller", marker = "python_full_version >= '3.12' and python_full_version < '3.15' and platform_system != 'FreeBSD'", specifier = ">=6.17.0" },
     { name = "pylint", specifier = ">=3.3.7" },
     { name = "pyright", specifier = ">=1.1.401" },
     { name = "pytest", specifier = ">=8.4.0" },
