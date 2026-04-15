@@ -33,19 +33,21 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+  # Use platform_system: sys.platform is e.g. freebsd15, not "freebsd", so sys_platform
+  # markers miss modern FreeBSD. platform.system() is "FreeBSD" on all versions.
   # litellm[proxy] pulls pyroscope-io (no FreeBSD wheels). CLI uses the client API only.
-  "litellm[proxy]>=1.81.1,<1.82.0; sys_platform != 'freebsd'",
-  "litellm>=1.81.1,<1.82.0; sys_platform == 'freebsd'",
+  "litellm[proxy]>=1.81.1,<1.82.0; platform_system != 'FreeBSD'",
+  "litellm>=1.81.1,<1.82.0; platform_system == 'FreeBSD'",
   "tenacity>=9.0.0",
   "pydantic[email]>=2.11.3",
   "rich",
-  "docker>=7.1.0; sys_platform != 'freebsd'",
-  "podman>=5.0.0; sys_platform == 'freebsd'",
+  "docker>=7.1.0; platform_system != 'FreeBSD'",
+  "podman>=5.0.0; platform_system == 'FreeBSD'",
   "textual>=6.0.0",
   "xmltodict>=0.13.0",
   "requests>=2.32.0",
   "cvss>=3.2",
-  "traceloop-sdk>=0.53.0; sys_platform != 'freebsd'",
+  "traceloop-sdk>=0.53.0; platform_system != 'FreeBSD'",
   "opentelemetry-exporter-otlp-proto-http>=1.40.0",
   "scrubadub>=2.0.1",
   "defusedxml>=0.7.1",

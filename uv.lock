@@ -4,16 +4,22 @@ requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.14' and sys_platform == 'emscripten'",
-    "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
-    "python_full_version >= '3.14' and sys_platform == 'freebsd'",
+    "python_full_version >= '3.14' and platform_system != 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version >= '3.14' and platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version >= '3.14' and platform_system != 'FreeBSD' and sys_platform == 'freebsd'",
+    "python_full_version >= '3.14' and platform_system == 'FreeBSD' and sys_platform == 'freebsd'",
     "python_full_version == '3.13.*' and sys_platform == 'win32'",
     "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
-    "python_full_version == '3.13.*' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
-    "python_full_version == '3.13.*' and sys_platform == 'freebsd'",
+    "python_full_version == '3.13.*' and platform_system != 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*' and platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*' and platform_system != 'FreeBSD' and sys_platform == 'freebsd'",
+    "python_full_version == '3.13.*' and platform_system == 'FreeBSD' and sys_platform == 'freebsd'",
     "python_full_version < '3.13' and sys_platform == 'win32'",
     "python_full_version < '3.13' and sys_platform == 'emscripten'",
-    "python_full_version < '3.13' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
-    "python_full_version < '3.13' and sys_platform == 'freebsd'",
+    "python_full_version < '3.13' and platform_system != 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and platform_system != 'FreeBSD' and sys_platform == 'freebsd'",
+    "python_full_version < '3.13' and platform_system == 'FreeBSD' and sys_platform == 'freebsd'",
 ]
 
 [[package]]
@@ -164,14 +170,14 @@ name = "anthropic"
 version = "0.86.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "anyio", marker = "sys_platform != 'freebsd'" },
-    { name = "distro", marker = "sys_platform != 'freebsd'" },
-    { name = "docstring-parser", marker = "sys_platform != 'freebsd'" },
-    { name = "httpx", marker = "sys_platform != 'freebsd'" },
-    { name = "jiter", marker = "sys_platform != 'freebsd'" },
-    { name = "pydantic", marker = "sys_platform != 'freebsd'" },
-    { name = "sniffio", marker = "sys_platform != 'freebsd'" },
-    { name = "typing-extensions", marker = "sys_platform != 'freebsd'" },
+    { name = "anyio", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "distro", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "docstring-parser", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "httpx", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "jiter", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "pydantic", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "sniffio", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "typing-extensions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/37/7a/8b390dc47945d3169875d342847431e5f7d5fa716b2e37494d57cfc1db10/anthropic-0.86.0.tar.gz", hash = "sha256:60023a7e879aa4fbb1fed99d487fe407b2ebf6569603e5047cfe304cebdaa0e5", size = 583820, upload-time = "2026-03-18T18:43:08.017Z" }
 wheels = [
@@ -196,7 +202,7 @@ name = "apscheduler"
 version = "3.11.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "tzlocal", marker = "sys_platform != 'freebsd'" },
+    { name = "tzlocal", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/07/12/3e4389e5920b4c1763390c6d371162f3784f86f85cd6d6c1bfe68eef14e2/apscheduler-3.11.2.tar.gz", hash = "sha256:2a9966b052ec805f020c8c4c3ae6e6a06e24b1bf19f2e11d91d8cca0473eef41", size = 108683, upload-time = "2025-12-22T00:39:34.884Z" }
 wheels = [
@@ -291,8 +297,8 @@ name = "azure-core"
 version = "1.39.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "requests", marker = "sys_platform != 'freebsd'" },
-    { name = "typing-extensions", marker = "sys_platform != 'freebsd'" },
+    { name = "requests", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "typing-extensions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/34/83/bbde3faa84ddcb8eb0eca4b3ffb3221252281db4ce351300fe248c5c70b1/azure_core-1.39.0.tar.gz", hash = "sha256:8a90a562998dd44ce84597590fff6249701b98c0e8797c95fcdd695b54c35d74", size = 367531, upload-time = "2026-03-19T01:31:29.461Z" }
 wheels = [
@@ -304,11 +310,11 @@ name = "azure-identity"
 version = "1.25.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "azure-core", marker = "sys_platform != 'freebsd'" },
-    { name = "cryptography", marker = "sys_platform != 'freebsd'" },
-    { name = "msal", marker = "sys_platform != 'freebsd'" },
-    { name = "msal-extensions", marker = "sys_platform != 'freebsd'" },
-    { name = "typing-extensions", marker = "sys_platform != 'freebsd'" },
+    { name = "azure-core", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "cryptography", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "msal", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "msal-extensions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "typing-extensions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c5/0e/3a63efb48aa4a5ae2cfca61ee152fbcb668092134d3eb8bfda472dd5c617/azure_identity-1.25.3.tar.gz", hash = "sha256:ab23c0d63015f50b630ef6c6cf395e7262f439ce06e5d07a64e874c724f8d9e6", size = 286304, upload-time = "2026-03-13T01:12:20.892Z" }
 wheels = [
@@ -320,10 +326,10 @@ name = "azure-storage-blob"
 version = "12.28.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "azure-core", marker = "sys_platform != 'freebsd'" },
-    { name = "cryptography", marker = "sys_platform != 'freebsd'" },
-    { name = "isodate", marker = "sys_platform != 'freebsd'" },
-    { name = "typing-extensions", marker = "sys_platform != 'freebsd'" },
+    { name = "azure-core", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "cryptography", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "isodate", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "typing-extensions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/71/24/072ba8e27b0e2d8fec401e9969b429d4f5fc4c8d4f0f05f4661e11f7234a/azure_storage_blob-12.28.0.tar.gz", hash = "sha256:e7d98ea108258d29aa0efbfd591b2e2075fa1722a2fae8699f0b3c9de11eff41", size = 604225, upload-time = "2026-01-06T23:48:57.282Z" }
 wheels = [
@@ -425,9 +431,9 @@ name = "boto3"
 version = "1.40.76"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "botocore", marker = "sys_platform != 'freebsd'" },
-    { name = "jmespath", marker = "sys_platform != 'freebsd'" },
-    { name = "s3transfer", marker = "sys_platform != 'freebsd'" },
+    { name = "botocore", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "jmespath", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "s3transfer", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/26/04/8cf6cf7e6390c71b9c958f3bfedc45d1182b51a35f7789354bf7b2ff4e8c/boto3-1.40.76.tar.gz", hash = "sha256:16f4cf97f8dd8e0aae015f4dc66219bd7716a91a40d1e2daa0dafa241a4761c5", size = 111598, upload-time = "2025-11-18T20:23:10.938Z" }
 wheels = [
@@ -439,9 +445,9 @@ name = "botocore"
 version = "1.40.76"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "jmespath", marker = "sys_platform != 'freebsd'" },
-    { name = "python-dateutil", marker = "sys_platform != 'freebsd'" },
-    { name = "urllib3", marker = "sys_platform != 'freebsd'" },
+    { name = "jmespath", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "python-dateutil", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "urllib3", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/07/eb/50e2d280589a3c20c3b649bb66262d2b53a25c03262e4cc492048ac7540a/botocore-1.40.76.tar.gz", hash = "sha256:2b16024d68b29b973005adfb5039adfe9099ebe772d40a90ca89f2e165c495dc", size = 14494001, upload-time = "2025-11-18T20:22:59.131Z" }
 wheels = [
@@ -823,7 +829,7 @@ name = "croniter"
 version = "6.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "python-dateutil", marker = "sys_platform != 'freebsd'" },
+    { name = "python-dateutil", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/df/de/5832661ed55107b8a09af3f0a2e71e0957226a59eb1dcf0a445cce6daf20/croniter-6.2.2.tar.gz", hash = "sha256:ba60832a5ec8e12e51b8691c3309a113d1cf6526bdf1a48150ce8ec7a532d0ab", size = 113762, upload-time = "2026-03-15T08:43:48.112Z" }
 wheels = [
@@ -945,7 +951,7 @@ name = "deprecated"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "wrapt", marker = "sys_platform != 'freebsd'" },
+    { name = "wrapt", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/49/85/12f0a49a7c4ffb70572b6c2ef13c90c88fd190debda93b23f026b25f9634/deprecated-1.3.1.tar.gz", hash = "sha256:b1b50e0ff0c1fddaa5708a2c6b0a6588bb09b892825ab2b214ac9ea9d92a5223", size = 2932523, upload-time = "2025-10-30T08:19:02.757Z" }
 wheels = [
@@ -994,8 +1000,8 @@ version = "7.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "requests", marker = "sys_platform != 'freebsd'" },
-    { name = "urllib3", marker = "sys_platform != 'freebsd'" },
+    { name = "requests", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "urllib3", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/91/9b/4a2ea29aeba62471211598dac5d96825bb49348fa07e906ea930394a83ce/docker-7.1.0.tar.gz", hash = "sha256:ad8c70e6e3f8926cb8a92619b832b4ea5299e2831c14284663184e200546fa6c", size = 117834, upload-time = "2024-05-23T11:13:57.216Z" }
 wheels = [
@@ -1084,10 +1090,10 @@ name = "fastapi-sso"
 version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "fastapi", marker = "sys_platform != 'freebsd'" },
-    { name = "httpx", marker = "sys_platform != 'freebsd'" },
-    { name = "oauthlib", marker = "sys_platform != 'freebsd'" },
-    { name = "pydantic", extra = ["email"], marker = "sys_platform != 'freebsd'" },
+    { name = "fastapi", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "httpx", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "oauthlib", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "pydantic", extra = ["email"], marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/57/9b/25c43c928b46ec919cb8941d3de53dd2e12bab12e1c0182646425dbefd60/fastapi_sso-0.16.0.tar.gz", hash = "sha256:f3941f986347566b7d3747c710cf474a907f581bfb6697ff3bb3e44eb76b438c", size = 16555, upload-time = "2024-11-04T11:54:38.579Z" }
 wheels = [
@@ -1682,7 +1688,7 @@ name = "gunicorn"
 version = "23.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "packaging", marker = "sys_platform != 'freebsd'" },
+    { name = "packaging", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/34/72/9614c465dc206155d93eff0ca20d42e1e35afc533971379482de953521a4/gunicorn-23.0.0.tar.gz", hash = "sha256:f014447a0101dc57e294f6c18ca6b40227a4c90e9bdb586042628030cba004ec", size = 375031, upload-time = "2024-08-10T20:25:27.378Z" }
 wheels = [
@@ -2247,31 +2253,31 @@ wheels = [
 
 [package.optional-dependencies]
 proxy = [
-    { name = "apscheduler", marker = "sys_platform != 'freebsd'" },
-    { name = "azure-identity", marker = "sys_platform != 'freebsd'" },
-    { name = "azure-storage-blob", marker = "sys_platform != 'freebsd'" },
-    { name = "backoff", marker = "sys_platform != 'freebsd'" },
-    { name = "boto3", marker = "sys_platform != 'freebsd'" },
-    { name = "cryptography", marker = "sys_platform != 'freebsd'" },
-    { name = "fastapi", marker = "sys_platform != 'freebsd'" },
-    { name = "fastapi-sso", marker = "sys_platform != 'freebsd'" },
-    { name = "gunicorn", marker = "sys_platform != 'freebsd'" },
-    { name = "litellm-enterprise", marker = "sys_platform != 'freebsd'" },
-    { name = "litellm-proxy-extras", marker = "sys_platform != 'freebsd'" },
-    { name = "mcp", marker = "sys_platform != 'freebsd'" },
-    { name = "orjson", marker = "sys_platform != 'freebsd'" },
-    { name = "polars", marker = "sys_platform != 'freebsd'" },
-    { name = "pyjwt", marker = "sys_platform != 'freebsd'" },
-    { name = "pynacl", marker = "sys_platform != 'freebsd'" },
-    { name = "pyroscope-io", marker = "sys_platform != 'freebsd' and sys_platform != 'win32'" },
-    { name = "python-multipart", marker = "sys_platform != 'freebsd'" },
-    { name = "pyyaml", marker = "sys_platform != 'freebsd'" },
-    { name = "rich", marker = "sys_platform != 'freebsd'" },
-    { name = "rq", marker = "sys_platform != 'freebsd'" },
-    { name = "soundfile", marker = "sys_platform != 'freebsd'" },
-    { name = "uvicorn", marker = "sys_platform != 'freebsd'" },
-    { name = "uvloop", marker = "sys_platform != 'freebsd' and sys_platform != 'win32'" },
-    { name = "websockets", marker = "sys_platform != 'freebsd'" },
+    { name = "apscheduler", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "azure-identity", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "azure-storage-blob", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "backoff", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "boto3", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "cryptography", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "fastapi", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "fastapi-sso", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "gunicorn", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "litellm-enterprise", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "litellm-proxy-extras", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "mcp", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "orjson", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "polars", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "pyjwt", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "pynacl", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "pyroscope-io", marker = "(platform_system != 'FreeBSD' and sys_platform != 'win32') or sys_platform == 'emscripten'" },
+    { name = "python-multipart", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "pyyaml", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "rich", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "rq", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "soundfile", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "uvicorn", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "uvloop", marker = "(platform_system != 'FreeBSD' and sys_platform != 'win32') or sys_platform == 'emscripten'" },
+    { name = "websockets", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 
 [[package]]
@@ -2377,7 +2383,7 @@ name = "macholib"
 version = "1.16.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "altgraph", marker = "sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'" },
+    { name = "altgraph", marker = "platform_system != 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/10/2f/97589876ea967487978071c9042518d28b958d87b17dceb7cdc1d881f963/macholib-1.16.4.tar.gz", hash = "sha256:f408c93ab2e995cd2c46e34fe328b130404be143469e41bc366c807448979362", size = 59427, upload-time = "2025-11-22T08:28:38.373Z" }
 wheels = [
@@ -2572,20 +2578,20 @@ name = "mcp"
 version = "1.26.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "anyio", marker = "sys_platform != 'freebsd'" },
-    { name = "httpx", marker = "sys_platform != 'freebsd'" },
-    { name = "httpx-sse", marker = "sys_platform != 'freebsd'" },
-    { name = "jsonschema", marker = "sys_platform != 'freebsd'" },
-    { name = "pydantic", marker = "sys_platform != 'freebsd'" },
-    { name = "pydantic-settings", marker = "sys_platform != 'freebsd'" },
-    { name = "pyjwt", extra = ["crypto"], marker = "sys_platform != 'freebsd'" },
-    { name = "python-multipart", marker = "sys_platform != 'freebsd'" },
+    { name = "anyio", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "httpx", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "httpx-sse", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "jsonschema", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "pydantic", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "pydantic-settings", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "pyjwt", extra = ["crypto"], marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "python-multipart", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "sse-starlette", marker = "sys_platform != 'freebsd'" },
-    { name = "starlette", marker = "sys_platform != 'freebsd'" },
-    { name = "typing-extensions", marker = "sys_platform != 'freebsd'" },
-    { name = "typing-inspection", marker = "sys_platform != 'freebsd'" },
-    { name = "uvicorn", marker = "sys_platform != 'emscripten' and sys_platform != 'freebsd'" },
+    { name = "sse-starlette", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "starlette", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "typing-extensions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "typing-inspection", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "uvicorn", marker = "(platform_system != 'FreeBSD' and sys_platform != 'emscripten') or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fc/6d/62e76bbb8144d6ed86e202b5edd8a4cb631e7c8130f3f4893c3f90262b10/mcp-1.26.0.tar.gz", hash = "sha256:db6e2ef491eecc1a0d93711a76f28dec2e05999f93afd48795da1c1137142c66", size = 608005, upload-time = "2026-01-24T19:40:32.468Z" }
 wheels = [
@@ -2618,9 +2624,9 @@ name = "msal"
 version = "1.35.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography", marker = "sys_platform != 'freebsd'" },
-    { name = "pyjwt", extra = ["crypto"], marker = "sys_platform != 'freebsd'" },
-    { name = "requests", marker = "sys_platform != 'freebsd'" },
+    { name = "cryptography", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "pyjwt", extra = ["crypto"], marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "requests", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3c/aa/5a646093ac218e4a329391d5a31e5092a89db7d2ef1637a90b82cd0b6f94/msal-1.35.1.tar.gz", hash = "sha256:70cac18ab80a053bff86219ba64cfe3da1f307c74b009e2da57ef040eb1b5656", size = 165658, upload-time = "2026-03-04T23:38:51.812Z" }
 wheels = [
@@ -2632,7 +2638,7 @@ name = "msal-extensions"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "msal", marker = "sys_platform != 'freebsd'" },
+    { name = "msal", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/01/99/5d239b6156eddf761a636bded1118414d161bd6b7b37a9335549ed159396/msal_extensions-1.3.1.tar.gz", hash = "sha256:c5b0fd10f65ef62b5f1d62f4251d51cbcaf003fcedae8c91b040a488614be1a4", size = 23315, upload-time = "2025-03-14T23:51:03.902Z" }
 wheels = [
@@ -2995,13 +3001,13 @@ name = "opentelemetry-exporter-otlp-proto-grpc"
 version = "1.40.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "googleapis-common-protos", marker = "sys_platform != 'freebsd'" },
-    { name = "grpcio", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-exporter-otlp-proto-common", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-proto", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-sdk", marker = "sys_platform != 'freebsd'" },
-    { name = "typing-extensions", marker = "sys_platform != 'freebsd'" },
+    { name = "googleapis-common-protos", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "grpcio", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-exporter-otlp-proto-common", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-proto", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-sdk", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "typing-extensions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/8f/7f/b9e60435cfcc7590fa87436edad6822240dddbc184643a2a005301cc31f4/opentelemetry_exporter_otlp_proto_grpc-1.40.0.tar.gz", hash = "sha256:bd4015183e40b635b3dab8da528b27161ba83bf4ef545776b196f0fb4ec47740", size = 25759, upload-time = "2026-03-04T14:17:24.4Z" }
 wheels = [
@@ -3031,10 +3037,10 @@ name = "opentelemetry-instrumentation"
 version = "0.61b0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "packaging", marker = "sys_platform != 'freebsd'" },
-    { name = "wrapt", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "packaging", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "wrapt", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/da/37/6bf8e66bfcee5d3c6515b79cb2ee9ad05fe573c20f7ceb288d0e7eeec28c/opentelemetry_instrumentation-0.61b0.tar.gz", hash = "sha256:cb21b48db738c9de196eba6b805b4ff9de3b7f187e4bbf9a466fa170514f1fc7", size = 32606, upload-time = "2026-03-04T14:20:16.825Z" }
 wheels = [
@@ -3046,10 +3052,10 @@ name = "opentelemetry-instrumentation-agno"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d8/6a/9bc1b5b259e6d3471928ccc416443fc7a584704e9f7df3b61f9f0499ddea/opentelemetry_instrumentation_agno-0.53.3.tar.gz", hash = "sha256:5fc0490c8d72aece101623bc96e24af6101c6017520c0fa0e82fce714cb1033a", size = 82794, upload-time = "2026-03-19T16:48:02.692Z" }
 wheels = [
@@ -3061,10 +3067,10 @@ name = "opentelemetry-instrumentation-alephalpha"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a2/bc/f3dddd3ad87546ade90f7a3956ee19fee687565dcc4ba229ff4cd651f0cd/opentelemetry_instrumentation_alephalpha-0.53.3.tar.gz", hash = "sha256:235bb8ddad63eec98a9a3e3e5e4acdd1d1aa27db08d21d729ec26d9037eabc30", size = 141428, upload-time = "2026-03-19T16:48:03.835Z" }
 wheels = [
@@ -3076,10 +3082,10 @@ name = "opentelemetry-instrumentation-anthropic"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/01/dd/b28a9c979c5d73faaa3427bbd4209f5b1d4934f0c6bbef58245f9e6dc778/opentelemetry_instrumentation_anthropic-0.53.3.tar.gz", hash = "sha256:dffdb91f9b671aa42ab210bef888d9772d12a08136512123c5d40c1035e74c92", size = 688796, upload-time = "2026-03-19T16:48:05.177Z" }
 wheels = [
@@ -3091,12 +3097,12 @@ name = "opentelemetry-instrumentation-bedrock"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "anthropic", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
-    { name = "tokenizers", marker = "sys_platform != 'freebsd'" },
+    { name = "anthropic", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "tokenizers", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3a/7b/a0c0d0859f5b9aa68e95d00b22abcdc4bbdbd7967fc96d47dd3fb8e4df53/opentelemetry_instrumentation_bedrock-0.53.3.tar.gz", hash = "sha256:f8b95ea9e2081336c343a8c17467881a345e8c5bc4113cd75e8a3f200849a9ab", size = 149891, upload-time = "2026-03-19T16:48:06.472Z" }
 wheels = [
@@ -3108,10 +3114,10 @@ name = "opentelemetry-instrumentation-chromadb"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cb/76/b821ee78969813fbc4ec3b86a5761253774cfa2298184448fad3ceaf9012/opentelemetry_instrumentation_chromadb-0.53.3.tar.gz", hash = "sha256:b401293c3626e98a93bb459298332fd4878e00f1e92d2dc4fc4a972fcdcfc5ba", size = 142119, upload-time = "2026-03-19T16:48:07.645Z" }
 wheels = [
@@ -3123,10 +3129,10 @@ name = "opentelemetry-instrumentation-cohere"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5c/c2/33e86da7fcfb004b229c0992ae0a348a21a2afbcb8e90c44a85456b11de9/opentelemetry_instrumentation_cohere-0.53.3.tar.gz", hash = "sha256:8c6af8b97296614a727a87f1b3425f28a864e4ba386d211ac28783a27c76ac0b", size = 103717, upload-time = "2026-03-19T16:48:09.102Z" }
 wheels = [
@@ -3138,10 +3144,10 @@ name = "opentelemetry-instrumentation-crewai"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5a/d1/1d15409fc4b666dfc4c61626df286ff335405b6a8de78c938c5787f0596d/opentelemetry_instrumentation_crewai-0.53.3.tar.gz", hash = "sha256:1ef0eefad33220cdedfb13941d9e020565ded1baf359ff0e1c98fe6b2e9b674f", size = 338577, upload-time = "2026-03-19T16:48:10.419Z" }
 wheels = [
@@ -3153,10 +3159,10 @@ name = "opentelemetry-instrumentation-google-generativeai"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/07/e1/3bae8de157bbf7b3837903969c7599a365c00cfe0c37345948644ad752e7/opentelemetry_instrumentation_google_generativeai-0.53.3.tar.gz", hash = "sha256:cb5905b3efc456addfb66e20078e457c2294cc2fb7687f1587d3ee9855703b34", size = 68589, upload-time = "2026-03-19T16:48:12.184Z" }
 wheels = [
@@ -3168,10 +3174,10 @@ name = "opentelemetry-instrumentation-groq"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a1/6c/3a51f21d151129c7b8787f394222e07382c6171a33d8d09f87f610fd9bc8/opentelemetry_instrumentation_groq-0.53.3.tar.gz", hash = "sha256:1f7cd3c4d1a5d6ca4dc560d716809ad65e416571ce9ac86d5be9df79f76fdc80", size = 129169, upload-time = "2026-03-19T16:48:13.583Z" }
 wheels = [
@@ -3183,10 +3189,10 @@ name = "opentelemetry-instrumentation-haystack"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ab/05/0da5ad79e5f26267a2074a84e79a80e5986d13bcd590e76df4e101838801/opentelemetry_instrumentation_haystack-0.53.3.tar.gz", hash = "sha256:3981a4b16f452e24fdfe7469def2cb0326da466371e6665723ea596cd6c035de", size = 78006, upload-time = "2026-03-19T16:48:14.893Z" }
 wheels = [
@@ -3198,10 +3204,10 @@ name = "opentelemetry-instrumentation-lancedb"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/40/39cec7b78d895a8a9ace866360e2f455cc6d4e9b6430038329af20ddd936/opentelemetry_instrumentation_lancedb-0.53.3.tar.gz", hash = "sha256:10b9e7e46cba018b64b00921ebec22dcf8167982a8268d43f07c082767821862", size = 53077, upload-time = "2026-03-19T16:48:16.223Z" }
 wheels = [
@@ -3213,10 +3219,10 @@ name = "opentelemetry-instrumentation-langchain"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/45/1f/d012bf6fbea6101dfd46adc3e6427285de85594488b20bbcfa8fa38dcb7e/opentelemetry_instrumentation_langchain-0.53.3.tar.gz", hash = "sha256:2ac2a82698bb75c01bee735f972e6ac44ca521d1b36b6861e840dd3e3c7d8a65", size = 396432, upload-time = "2026-03-19T16:48:17.402Z" }
 wheels = [
@@ -3228,11 +3234,11 @@ name = "opentelemetry-instrumentation-llamaindex"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "inflection", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "inflection", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/85/79/bffe61b298a8d626a847a5d6ba1076669a56827da350eb4dca6ece433cb8/opentelemetry_instrumentation_llamaindex-0.53.3.tar.gz", hash = "sha256:3a4d6471b6662719c4f5a81b7b36d6b9b3acc2bbe0eaedefba371444b0e38afc", size = 1274131, upload-time = "2026-03-19T16:48:19.378Z" }
 wheels = [
@@ -3244,8 +3250,8 @@ name = "opentelemetry-instrumentation-logging"
 version = "0.61b0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ae/e0/69473f925acfe2d4edf5c23bcced36906ac3627aa7c5722a8e3f60825f3b/opentelemetry_instrumentation_logging-0.61b0.tar.gz", hash = "sha256:feaa30b700acd2a37cc81db5f562ab0c3a5b6cc2453595e98b72c01dcf649584", size = 17906, upload-time = "2026-03-04T14:20:37.398Z" }
 wheels = [
@@ -3257,10 +3263,10 @@ name = "opentelemetry-instrumentation-marqo"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/23/56/fe81a81cb12b14cc7f8fbc3ea584557faf021c9c40ffca04b6d0159c5c29/opentelemetry_instrumentation_marqo-0.53.3.tar.gz", hash = "sha256:047f2f03b8e9bae939ab12bdaa6c8c9ba235217430118fa22acf4af7e7a2467c", size = 48925, upload-time = "2026-03-19T16:48:20.815Z" }
 wheels = [
@@ -3272,10 +3278,10 @@ name = "opentelemetry-instrumentation-mcp"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5b/ab/3532e0e4a9401b65a09de02bda1e775996e877fd2b2dd7e5704cf88a27cd/opentelemetry_instrumentation_mcp-0.53.3.tar.gz", hash = "sha256:07644645afd8beec617dbfcb01ced7579156ed8754d185301b2cd9c1bb3548a6", size = 119770, upload-time = "2026-03-19T16:48:21.967Z" }
 wheels = [
@@ -3287,10 +3293,10 @@ name = "opentelemetry-instrumentation-milvus"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/45/f1/9367d05f77538bc0d2d7bc4918139df3379e6a09d900d9c6388c150875b2/opentelemetry_instrumentation_milvus-0.53.3.tar.gz", hash = "sha256:a47ad392592d16f15fdb95171560edc10d49a948d5b22354b36d841c5fc95454", size = 70515, upload-time = "2026-03-19T16:48:23.171Z" }
 wheels = [
@@ -3302,10 +3308,10 @@ name = "opentelemetry-instrumentation-mistralai"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/94/ea/51a978cede7ec540c5f97205f4596c66ad5c3a6e017497e76185b542cdcc/opentelemetry_instrumentation_mistralai-0.53.3.tar.gz", hash = "sha256:009a23bf0422f64881b1e64886b1f25cda1e2bc610a59cc34e936e811e398cc1", size = 114296, upload-time = "2026-03-19T16:48:24.632Z" }
 wheels = [
@@ -3317,10 +3323,10 @@ name = "opentelemetry-instrumentation-ollama"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/24/25/9f1902e47fbac88f76d9fc3f5347c9e157f320c0f827bc14d5e20620c02b/opentelemetry_instrumentation_ollama-0.53.3.tar.gz", hash = "sha256:097ee802a4d962acf0a4e6e3e49e3f8e420e1c24f24605cc4024c836716733c3", size = 171929, upload-time = "2026-03-19T16:48:25.868Z" }
 wheels = [
@@ -3332,10 +3338,10 @@ name = "opentelemetry-instrumentation-openai"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c4/19/fdf3bc7ed55521082702b9eac41fe27c28871d56b305492c9a6bc19236cb/opentelemetry_instrumentation_openai-0.53.3.tar.gz", hash = "sha256:38342c9ee9197063eac712b404fdce036e985a9f0409c712cad520906bde8326", size = 6978377, upload-time = "2026-03-19T16:48:27.566Z" }
 wheels = [
@@ -3347,10 +3353,10 @@ name = "opentelemetry-instrumentation-openai-agents"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/87/41/abeea611564388a7d05f201f149abaa1b48bc82e04d2b78652b25c22af2d/opentelemetry_instrumentation_openai_agents-0.53.3.tar.gz", hash = "sha256:de33596c2e35306e302c86933bd755bec0bc5cc3a26ede6bb6b1e30d42e1e81c", size = 286488, upload-time = "2026-03-19T16:48:29.599Z" }
 wheels = [
@@ -3362,10 +3368,10 @@ name = "opentelemetry-instrumentation-pinecone"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0b/7b/9dbf1de83f93854376fe2b00a8951f2dc2d629b163cc1d0f3c13bbf35fae/opentelemetry_instrumentation_pinecone-0.53.3.tar.gz", hash = "sha256:97fadb0125a1c557e93590b3046f5e878090893b12eabcf01075fd2b8219b291", size = 146594, upload-time = "2026-03-19T16:48:30.762Z" }
 wheels = [
@@ -3377,10 +3383,10 @@ name = "opentelemetry-instrumentation-qdrant"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7f/c4/b007e7ea04950cd0480e7040aee486c5657a36bbda712b8e86dfbc1199ec/opentelemetry_instrumentation_qdrant-0.53.3.tar.gz", hash = "sha256:d720994c812574e64afe552592afb902571c739cf80fe92880d3e017f14f9aed", size = 75175, upload-time = "2026-03-19T16:48:32.238Z" }
 wheels = [
@@ -3392,10 +3398,10 @@ name = "opentelemetry-instrumentation-redis"
 version = "0.61b0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "wrapt", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "wrapt", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cf/21/26205f89358a5f2be3ee5512d3d3bce16b622977f64aeaa9d3fa8887dd39/opentelemetry_instrumentation_redis-0.61b0.tar.gz", hash = "sha256:ae0fbb56be9a641e621d55b02a7d62977a2c77c5ee760addd79b9b266e46e523", size = 14781, upload-time = "2026-03-04T14:20:45.694Z" }
 wheels = [
@@ -3407,10 +3413,10 @@ name = "opentelemetry-instrumentation-replicate"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1f/5f/54a7745e3316546fcf781289d0332445be4f1b3746b3d5e46b164f9db1c0/opentelemetry_instrumentation_replicate-0.53.3.tar.gz", hash = "sha256:29005945c697a75addcd75342433a06434df619ceb1b6a2425ae3206ed2840d6", size = 61122, upload-time = "2026-03-19T16:48:33.276Z" }
 wheels = [
@@ -3422,10 +3428,10 @@ name = "opentelemetry-instrumentation-requests"
 version = "0.61b0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-util-http", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-util-http", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5a/c7/7a47cb85c7aa93a9c820552e414889185bcf91245271d12e5d443e5f834d/opentelemetry_instrumentation_requests-0.61b0.tar.gz", hash = "sha256:15f879ce8fb206bd7e6fdc61663ea63481040a845218c0cf42902ce70bd7e9d9", size = 18379, upload-time = "2026-03-04T14:20:46.959Z" }
 wheels = [
@@ -3437,10 +3443,10 @@ name = "opentelemetry-instrumentation-sagemaker"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6e/44/1e25284ac352622477736348d01a97548963726484a46c18df29ecdf94e8/opentelemetry_instrumentation_sagemaker-0.53.3.tar.gz", hash = "sha256:e14637be82d8279640761eeb1ab312eaba8628164ee7d4851971fcb2bd2fd5e3", size = 35688, upload-time = "2026-03-19T16:48:34.366Z" }
 wheels = [
@@ -3452,11 +3458,11 @@ name = "opentelemetry-instrumentation-sqlalchemy"
 version = "0.61b0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "packaging", marker = "sys_platform != 'freebsd'" },
-    { name = "wrapt", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "packaging", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "wrapt", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9e/4f/3a325b180944610697a0a926d49d782b41a86120050d44fefb2715b630ac/opentelemetry_instrumentation_sqlalchemy-0.61b0.tar.gz", hash = "sha256:13a3a159a2043a52f0180b3757fbaa26741b0e08abb50deddce4394c118956e6", size = 15343, upload-time = "2026-03-04T14:20:47.648Z" }
 wheels = [
@@ -3468,9 +3474,9 @@ name = "opentelemetry-instrumentation-threading"
 version = "0.61b0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "wrapt", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "wrapt", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/12/8f/8dedba66100cda58af057926449a5e58e6c008bec02bc2746c03c3d85dcd/opentelemetry_instrumentation_threading-0.61b0.tar.gz", hash = "sha256:38e0263c692d15a7a458b3fa0286d29290448fa4ac4c63045edac438c6113433", size = 9163, upload-time = "2026-03-04T14:20:50.546Z" }
 wheels = [
@@ -3482,10 +3488,10 @@ name = "opentelemetry-instrumentation-together"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f7/78/ddbc0958112432e9aec2d488d09fc00a14a2a8f1168a4389256cca2def30/opentelemetry_instrumentation_together-0.53.3.tar.gz", hash = "sha256:9c3c826dca58df92ae1945c4098d3407c8dfbe1e270e6052f9fd0c6fbf5026f1", size = 133704, upload-time = "2026-03-19T16:48:35.819Z" }
 wheels = [
@@ -3497,10 +3503,10 @@ name = "opentelemetry-instrumentation-transformers"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/00/9c/e020700d5039417274ff8a6896f2e12d1fdc90419cf23992639f671cefd8/opentelemetry_instrumentation_transformers-0.53.3.tar.gz", hash = "sha256:a485b57579944a604efcf4850ce7c1bb8f40da65932686c1f8c8c054b6f6150a", size = 69329, upload-time = "2026-03-19T16:48:36.945Z" }
 wheels = [
@@ -3512,11 +3518,11 @@ name = "opentelemetry-instrumentation-urllib3"
 version = "0.61b0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-util-http", marker = "sys_platform != 'freebsd'" },
-    { name = "wrapt", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-util-http", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "wrapt", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fa/80/7ad8da30f479c6117768e72d6f2f3f0bd3495338707d6f61de042149578a/opentelemetry_instrumentation_urllib3-0.61b0.tar.gz", hash = "sha256:f00037bc8ff813153c4b79306f55a14618c40469a69c6c03a3add29dc7e8b928", size = 19325, upload-time = "2026-03-04T14:20:53.386Z" }
 wheels = [
@@ -3528,10 +3534,10 @@ name = "opentelemetry-instrumentation-vertexai"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ea/af/8662a092c37e53b72729e38c85d181769e2bd6c36bdb916134b5525666a0/opentelemetry_instrumentation_vertexai-0.53.3.tar.gz", hash = "sha256:d28c455f94a91053ebc2390f22d8338a35354a45a59ae8cea2cc10d90f868ae5", size = 79155, upload-time = "2026-03-19T16:48:38Z" }
 wheels = [
@@ -3543,10 +3549,10 @@ name = "opentelemetry-instrumentation-voyageai"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/47/18/4c5cc3eea896c04a606a39e327da31f9c682363b0952e76a3963374dbc27/opentelemetry_instrumentation_voyageai-0.53.3.tar.gz", hash = "sha256:c1d88ffd90d390c59d799d0256582d8fb905fdaa08aadfd2ed069c79cbf1268d", size = 168928, upload-time = "2026-03-19T16:48:39.14Z" }
 wheels = [
@@ -3558,10 +3564,10 @@ name = "opentelemetry-instrumentation-watsonx"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d7/f5/c1dac4d7a9d1e29751d07429e1d4fc1a61b15259f3a3a0211e40d40c82dd/opentelemetry_instrumentation_watsonx-0.53.3.tar.gz", hash = "sha256:e8a59dab1de647472aac95a30ac948acc9189dc830dc2a5a2661a36263095684", size = 85327, upload-time = "2026-03-19T16:48:40.252Z" }
 wheels = [
@@ -3573,10 +3579,10 @@ name = "opentelemetry-instrumentation-weaviate"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/12/626d8f875e305009099f98a5e5593d6dcca327105587106472811f01d9c5/opentelemetry_instrumentation_weaviate-0.53.3.tar.gz", hash = "sha256:2670f1982cd44589f992f25b162586d7dface57241e52e4d3ab9cea6d832721f", size = 602778, upload-time = "2026-03-19T16:48:41.542Z" }
 wheels = [
@@ -3588,10 +3594,10 @@ name = "opentelemetry-instrumentation-writer"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e2/b3/68088b956744a358f75f7cc0e7ed81357510265eddf29f4835f6e65a984f/opentelemetry_instrumentation_writer-0.53.3.tar.gz", hash = "sha256:1f242a08c7e636d7942f1fd14be12fee7f96511a354d48b4c5cc090af1255bb0", size = 167693, upload-time = "2026-03-19T16:48:43.114Z" }
 wheels = [
@@ -3642,8 +3648,8 @@ name = "opentelemetry-semantic-conventions-ai"
 version = "0.4.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "opentelemetry-sdk", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions", marker = "sys_platform != 'freebsd'" },
+    { name = "opentelemetry-sdk", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/37/44/fda3c60e77548224ffd86b62aab5a58534e1d32f74d2ccd50ef58aade8d3/opentelemetry_semantic_conventions_ai-0.4.16.tar.gz", hash = "sha256:572eb878d8b81e50f1e53d2a5c1b441e7d34918ee01c846ff62485204d660c22", size = 19071, upload-time = "2026-03-19T15:29:35.357Z" }
 wheels = [
@@ -3945,8 +3951,8 @@ name = "podman"
 version = "5.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "requests", marker = "sys_platform == 'freebsd'" },
-    { name = "urllib3", marker = "sys_platform == 'freebsd'" },
+    { name = "requests", marker = "platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "urllib3", marker = "platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/18/f1/ea8988ff2085d1a898f7f27b7fa26a5b5e296949c6ef4df26ebc2be1aac0/podman-5.8.0.tar.gz", hash = "sha256:bc39b77f4a6a0598bbe860d199e0d54ef2ec551131ae7eab66f0557c43331fb3", size = 121596, upload-time = "2026-03-25T15:21:22.353Z" }
 wheels = [
@@ -3958,7 +3964,7 @@ name = "polars"
 version = "1.39.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "polars-runtime-32", marker = "sys_platform != 'freebsd'" },
+    { name = "polars-runtime-32", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/93/ab/f19e592fce9e000da49c96bf35e77cef67f9cb4b040bfa538a2764c0263e/polars-1.39.3.tar.gz", hash = "sha256:2e016c7f3e8d14fa777ef86fe0477cec6c67023a20ba4c94d6e8431eefe4a63c", size = 728987, upload-time = "2026-03-20T11:16:24.836Z" }
 wheels = [
@@ -4282,9 +4288,9 @@ name = "pydantic-settings"
 version = "2.13.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pydantic", marker = "sys_platform != 'freebsd'" },
-    { name = "python-dotenv", marker = "sys_platform != 'freebsd'" },
-    { name = "typing-inspection", marker = "sys_platform != 'freebsd'" },
+    { name = "pydantic", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "python-dotenv", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "typing-inspection", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/52/6d/fffca34caecc4a3f97bda81b2098da5e8ab7efc9a66e819074a11955d87e/pydantic_settings-2.13.1.tar.gz", hash = "sha256:b4c11847b15237fb0171e1462bf540e294affb9b86db4d9aa5c01730bdbe4025", size = 223826, upload-time = "2026-02-19T13:45:08.055Z" }
 wheels = [
@@ -4336,7 +4342,7 @@ version = "6.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "altgraph" },
-    { name = "macholib", marker = "sys_platform == 'darwin'" },
+    { name = "macholib", marker = "platform_system != 'FreeBSD' and sys_platform == 'darwin'" },
     { name = "packaging" },
     { name = "pefile", marker = "sys_platform == 'win32'" },
     { name = "pyinstaller-hooks-contrib" },
@@ -4382,7 +4388,7 @@ wheels = [
 
 [package.optional-dependencies]
 crypto = [
-    { name = "cryptography", marker = "sys_platform != 'freebsd'" },
+    { name = "cryptography", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 
 [[package]]
@@ -4408,7 +4414,7 @@ name = "pynacl"
 version = "1.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "platform_python_implementation != 'PyPy' and sys_platform != 'freebsd'" },
+    { name = "cffi", marker = "(platform_python_implementation != 'PyPy' and platform_system != 'FreeBSD') or (platform_python_implementation != 'PyPy' and sys_platform == 'emscripten') or (platform_python_implementation != 'PyPy' and sys_platform == 'win32')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d9/9a/4019b524b03a13438637b11538c82781a5eda427394380381af8f04f467a/pynacl-1.6.2.tar.gz", hash = "sha256:018494d6d696ae03c7e656e5e74cdfd8ea1326962cc401bcf018f1ed8436811c", size = 3511692, upload-time = "2026-01-01T17:48:10.851Z" }
 wheels = [
@@ -4474,7 +4480,7 @@ name = "pyroscope-io"
 version = "0.8.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "sys_platform != 'freebsd' and sys_platform != 'win32'" },
+    { name = "cffi", marker = "(platform_system != 'FreeBSD' and sys_platform != 'win32') or sys_platform == 'emscripten'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a8/50/607b38b120ba8adad954119ba512c53590c793f0cf7f009ba6549e4e1d77/pyroscope_io-0.8.16-py2.py3-none-macosx_11_0_arm64.whl", hash = "sha256:e07edcfd59f5bdce42948b92c9b118c824edbd551730305f095a6b9af401a9e8", size = 3138869, upload-time = "2026-01-22T06:23:24.664Z" },
@@ -5035,9 +5041,9 @@ name = "rq"
 version = "2.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click", marker = "sys_platform != 'freebsd'" },
-    { name = "croniter", marker = "sys_platform != 'freebsd'" },
-    { name = "redis", marker = "sys_platform != 'freebsd'" },
+    { name = "click", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "croniter", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "redis", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c5/9b/93b7180220fe462b4128425e687665bcdeffddc51683d41e7fbe509c2d2e/rq-2.7.0.tar.gz", hash = "sha256:c2156fc7249b5d43dda918c4355cfbf8d0d299a5cdd3963918e9c8daf4b1e0c0", size = 679396, upload-time = "2026-02-22T11:10:50.775Z" }
 wheels = [
@@ -5074,7 +5080,7 @@ name = "s3transfer"
 version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "botocore", marker = "sys_platform != 'freebsd'" },
+    { name = "botocore", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/62/74/8d69dcb7a9efe8baa2046891735e5dfe433ad558ae23d9e3c14c633d1d58/s3transfer-0.14.0.tar.gz", hash = "sha256:eff12264e7c8b4985074ccce27a3b38a485bb7f7422cc8046fee9be4983e4125", size = 151547, upload-time = "2025-09-09T19:23:31.089Z" }
 wheels = [
@@ -5264,7 +5270,7 @@ name = "soundfile"
 version = "0.12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "sys_platform != 'freebsd'" },
+    { name = "cffi", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6f/96/5ff33900998bad58d5381fd1acfcdac11cbea4f08fc72ac1dc25ffb13f6a/soundfile-0.12.1.tar.gz", hash = "sha256:e8e1017b2cf1dda767aef19d2fd9ee5ebe07e050d430f77a0a7c66ba08b8cdae", size = 43184, upload-time = "2023-02-15T15:37:32.011Z" }
 wheels = [
@@ -5387,8 +5393,8 @@ name = "sse-starlette"
 version = "3.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "anyio", marker = "sys_platform != 'freebsd'" },
-    { name = "starlette", marker = "sys_platform != 'freebsd'" },
+    { name = "anyio", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "starlette", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/14/2f/9223c24f568bb7a0c03d751e609844dce0968f13b39a3f73fbb3a96cd27a/sse_starlette-3.3.3.tar.gz", hash = "sha256:72a95d7575fd5129bd0ae15275ac6432bb35ac542fdebb82889c24bb9f3f4049", size = 32420, upload-time = "2026-03-17T20:05:55.529Z" }
 wheels = [
@@ -5460,18 +5466,18 @@ source = { editable = "." }
 dependencies = [
     { name = "cvss" },
     { name = "defusedxml" },
-    { name = "docker", marker = "sys_platform != 'freebsd'" },
-    { name = "litellm" },
-    { name = "litellm", extra = ["proxy"], marker = "sys_platform != 'freebsd'" },
+    { name = "docker", marker = "platform_system != 'FreeBSD'" },
+    { name = "litellm", marker = "(platform_system != 'FreeBSD' and sys_platform == 'emscripten') or (platform_system != 'FreeBSD' and sys_platform == 'win32') or (sys_platform != 'emscripten' and sys_platform != 'win32')" },
+    { name = "litellm", extra = ["proxy"], marker = "platform_system != 'FreeBSD'" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
-    { name = "podman", marker = "sys_platform == 'freebsd'" },
+    { name = "podman", marker = "platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
     { name = "pydantic", extra = ["email"] },
     { name = "requests" },
     { name = "rich" },
     { name = "scrubadub" },
     { name = "tenacity" },
     { name = "textual" },
-    { name = "traceloop-sdk", marker = "sys_platform != 'freebsd'" },
+    { name = "traceloop-sdk", marker = "platform_system != 'FreeBSD'" },
     { name = "xmltodict" },
 ]
 
@@ -5512,19 +5518,19 @@ dev = [
 requires-dist = [
     { name = "cvss", specifier = ">=3.2" },
     { name = "defusedxml", specifier = ">=0.7.1" },
-    { name = "docker", marker = "sys_platform != 'freebsd'", specifier = ">=7.1.0" },
+    { name = "docker", marker = "platform_system != 'FreeBSD'", specifier = ">=7.1.0" },
     { name = "fastapi", marker = "extra == 'sandbox'" },
     { name = "google-cloud-aiplatform", marker = "extra == 'vertex'", specifier = ">=1.38" },
     { name = "gql", extras = ["requests"], marker = "extra == 'sandbox'", specifier = ">=3.5.3" },
     { name = "ipython", marker = "extra == 'sandbox'", specifier = ">=9.3.0" },
     { name = "libtmux", marker = "extra == 'sandbox'", specifier = ">=0.46.2" },
-    { name = "litellm", marker = "sys_platform == 'freebsd'", specifier = ">=1.81.1,<1.82.0" },
-    { name = "litellm", extras = ["proxy"], marker = "sys_platform != 'freebsd'", specifier = ">=1.81.1,<1.82.0" },
+    { name = "litellm", marker = "platform_system == 'FreeBSD'", specifier = ">=1.81.1,<1.82.0" },
+    { name = "litellm", extras = ["proxy"], marker = "platform_system != 'FreeBSD'", specifier = ">=1.81.1,<1.82.0" },
     { name = "numpydoc", marker = "extra == 'sandbox'", specifier = ">=1.8.0" },
     { name = "openhands-aci", marker = "extra == 'sandbox'", specifier = ">=0.3.0" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.40.0" },
     { name = "playwright", marker = "extra == 'sandbox'", specifier = ">=1.48.0" },
-    { name = "podman", marker = "sys_platform == 'freebsd'", specifier = ">=5.0.0" },
+    { name = "podman", marker = "platform_system == 'FreeBSD'", specifier = ">=5.0.0" },
     { name = "pydantic", extras = ["email"], specifier = ">=2.11.3" },
     { name = "pyte", marker = "extra == 'sandbox'", specifier = ">=0.8.1" },
     { name = "requests", specifier = ">=2.32.0" },
@@ -5532,7 +5538,7 @@ requires-dist = [
     { name = "scrubadub", specifier = ">=2.0.1" },
     { name = "tenacity", specifier = ">=9.0.0" },
     { name = "textual", specifier = ">=6.0.0" },
-    { name = "traceloop-sdk", marker = "sys_platform != 'freebsd'", specifier = ">=0.53.0" },
+    { name = "traceloop-sdk", marker = "platform_system != 'FreeBSD'", specifier = ">=0.53.0" },
     { name = "uvicorn", marker = "extra == 'sandbox'" },
     { name = "xmltodict", specifier = ">=0.13.0" },
 ]
@@ -5700,55 +5706,55 @@ name = "traceloop-sdk"
 version = "0.53.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "aiohttp", marker = "sys_platform != 'freebsd'" },
-    { name = "colorama", marker = "sys_platform != 'freebsd'" },
-    { name = "cuid", marker = "sys_platform != 'freebsd'" },
-    { name = "deprecated", marker = "sys_platform != 'freebsd'" },
-    { name = "jinja2", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-api", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-exporter-otlp-proto-grpc", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-exporter-otlp-proto-http", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-agno", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-alephalpha", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-anthropic", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-bedrock", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-chromadb", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-cohere", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-crewai", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-google-generativeai", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-groq", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-haystack", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-lancedb", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-langchain", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-llamaindex", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-logging", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-marqo", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-mcp", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-milvus", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-mistralai", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-ollama", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-openai", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-openai-agents", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-pinecone", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-qdrant", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-redis", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-replicate", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-requests", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-sagemaker", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-sqlalchemy", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-threading", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-together", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-transformers", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-urllib3", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-vertexai", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-voyageai", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-watsonx", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-weaviate", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-instrumentation-writer", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-sdk", marker = "sys_platform != 'freebsd'" },
-    { name = "opentelemetry-semantic-conventions-ai", marker = "sys_platform != 'freebsd'" },
-    { name = "pydantic", marker = "sys_platform != 'freebsd'" },
-    { name = "tenacity", marker = "sys_platform != 'freebsd'" },
+    { name = "aiohttp", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "colorama", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "cuid", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "deprecated", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "jinja2", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-api", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-exporter-otlp-proto-grpc", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-exporter-otlp-proto-http", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-agno", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-alephalpha", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-anthropic", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-bedrock", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-chromadb", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-cohere", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-crewai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-google-generativeai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-groq", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-haystack", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-lancedb", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-langchain", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-llamaindex", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-logging", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-marqo", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-mcp", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-milvus", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-mistralai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-ollama", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-openai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-openai-agents", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-pinecone", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-qdrant", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-redis", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-replicate", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-requests", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-sagemaker", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-sqlalchemy", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-threading", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-together", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-transformers", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-urllib3", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-vertexai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-voyageai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-watsonx", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-weaviate", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-instrumentation-writer", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-sdk", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "pydantic", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "tenacity", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b1/eb/2a1c10b5c3379518b2d98cab67fd6d39c09cef114b9ad0b798eba75bc5d0/traceloop_sdk-0.53.3.tar.gz", hash = "sha256:9ef955f1a618e57675e4cefe015af78ed55036c4f9b014ec24ade0a048f65354", size = 321318, upload-time = "2026-03-19T16:49:32.986Z" }
 wheels = [
