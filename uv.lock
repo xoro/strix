@@ -1742,15 +1742,15 @@ name = "huggingface-hub"
 version = "1.7.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock" },
-    { name = "fsspec" },
-    { name = "hf-xet", marker = "platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'" },
-    { name = "httpx" },
-    { name = "packaging" },
-    { name = "pyyaml" },
-    { name = "tqdm" },
-    { name = "typer" },
-    { name = "typing-extensions" },
+    { name = "filelock", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "fsspec", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "hf-xet", marker = "(platform_machine == 'AMD64' and platform_system != 'FreeBSD') or (platform_machine == 'aarch64' and platform_system != 'FreeBSD') or (platform_machine == 'amd64' and platform_system != 'FreeBSD') or (platform_machine == 'arm64' and platform_system != 'FreeBSD') or (platform_machine == 'x86_64' and platform_system != 'FreeBSD') or (platform_machine == 'AMD64' and sys_platform == 'emscripten') or (platform_machine == 'aarch64' and sys_platform == 'emscripten') or (platform_machine == 'amd64' and sys_platform == 'emscripten') or (platform_machine == 'arm64' and sys_platform == 'emscripten') or (platform_machine == 'x86_64' and sys_platform == 'emscripten') or (platform_machine == 'AMD64' and sys_platform == 'win32') or (platform_machine == 'aarch64' and sys_platform == 'win32') or (platform_machine == 'amd64' and sys_platform == 'win32') or (platform_machine == 'arm64' and sys_platform == 'win32') or (platform_machine == 'x86_64' and sys_platform == 'win32')" },
+    { name = "httpx", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "packaging", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "pyyaml", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "tqdm", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "typer", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "typing-extensions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/19/15/eafc1c57bf0f8afffb243dcd4c0cceb785e956acc17bba4d9bf2ae21fc9c/huggingface_hub-1.7.2.tar.gz", hash = "sha256:7f7e294e9bbb822e025bdb2ada025fa4344d978175a7f78e824d86e35f7ab43b", size = 724684, upload-time = "2026-03-20T10:36:08.767Z" }
 wheels = [
@@ -2207,8 +2207,10 @@ dependencies = [
     { name = "openai" },
     { name = "pydantic" },
     { name = "python-dotenv" },
-    { name = "tiktoken" },
-    { name = "tokenizers" },
+    { name = "tiktoken", version = "0.12.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "tiktoken", version = "0.12.0+strix", source = { directory = "vendor/tiktoken-stub" }, marker = "platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "tokenizers", version = "0.22.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "tokenizers", version = "0.22.2+strix", source = { directory = "vendor/tokenizers-stub" }, marker = "platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d6/36/3cbb22d6ef88c10f3fa4f04664c2a37e93a2e6f9c51899cd9fd025cb0a50/litellm-1.81.16.tar.gz", hash = "sha256:264a3868942e722cd6c19c2d625524fe624a1b6961c37c22d299dc7ea99823b3", size = 16668405, upload-time = "2026-02-26T13:01:48.429Z" }
 wheels = [
@@ -3066,7 +3068,7 @@ dependencies = [
     { name = "opentelemetry-instrumentation", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
     { name = "opentelemetry-semantic-conventions", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
     { name = "opentelemetry-semantic-conventions-ai", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
-    { name = "tokenizers", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "tokenizers", version = "0.22.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3a/7b/a0c0d0859f5b9aa68e95d00b22abcdc4bbdbd7967fc96d47dd3fb8e4df53/opentelemetry_instrumentation_bedrock-0.53.3.tar.gz", hash = "sha256:f8b95ea9e2081336c343a8c17467881a345e8c5bc4113cd75e8a3f200849a9ab", size = 149891, upload-time = "2026-03-19T16:48:06.472Z" }
 wheels = [
@@ -5442,6 +5444,10 @@ dependencies = [
     { name = "scrubadub" },
     { name = "tenacity" },
     { name = "textual" },
+    { name = "tiktoken", version = "0.12.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_system != 'FreeBSD'" },
+    { name = "tiktoken", version = "0.12.0+strix", source = { directory = "vendor/tiktoken-stub" }, marker = "platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "tokenizers", version = "0.22.2", source = { registry = "https://pypi.org/simple" }, marker = "platform_system != 'FreeBSD'" },
+    { name = "tokenizers", version = "0.22.2+strix", source = { directory = "vendor/tokenizers-stub" }, marker = "platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'win32'" },
     { name = "traceloop-sdk", marker = "platform_system != 'FreeBSD'" },
     { name = "xmltodict" },
 ]
@@ -5504,6 +5510,10 @@ requires-dist = [
     { name = "scrubadub", specifier = ">=2.0.1" },
     { name = "tenacity", specifier = ">=9.0.0" },
     { name = "textual", specifier = ">=6.0.0" },
+    { name = "tiktoken", marker = "platform_system != 'FreeBSD'", specifier = ">=0.7.0" },
+    { name = "tiktoken", marker = "platform_system == 'FreeBSD'", directory = "vendor/tiktoken-stub" },
+    { name = "tokenizers", marker = "platform_system != 'FreeBSD'", specifier = ">=0.13" },
+    { name = "tokenizers", marker = "platform_system == 'FreeBSD'", directory = "vendor/tokenizers-stub" },
     { name = "traceloop-sdk", marker = "platform_system != 'FreeBSD'", specifier = ">=0.53.0" },
     { name = "uvicorn", marker = "extra == 'sandbox'" },
     { name = "xmltodict", specifier = ">=0.13.0" },
@@ -5577,9 +5587,23 @@ wheels = [
 name = "tiktoken"
 version = "0.12.0"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.14' and platform_system != 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version >= '3.14' and platform_system != 'FreeBSD' and sys_platform == 'freebsd'",
+    "python_full_version == '3.13.*' and sys_platform == 'win32'",
+    "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
+    "python_full_version == '3.13.*' and platform_system != 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*' and platform_system != 'FreeBSD' and sys_platform == 'freebsd'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'emscripten'",
+    "python_full_version < '3.13' and platform_system != 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and platform_system != 'FreeBSD' and sys_platform == 'freebsd'",
+]
 dependencies = [
-    { name = "regex" },
-    { name = "requests" },
+    { name = "regex", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "requests", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7d/ab/4d017d0f76ec3171d469d80fc03dfbb4e48a4bcaddaa831b31d526f05edc/tiktoken-0.12.0.tar.gz", hash = "sha256:b18ba7ee2b093863978fcb14f74b3707cdc8d4d4d3836853ce7ec60772139931", size = 37806, upload-time = "2025-10-06T20:22:45.419Z" }
 wheels = [
@@ -5621,11 +5645,38 @@ wheels = [
 ]
 
 [[package]]
+name = "tiktoken"
+version = "0.12.0+strix"
+source = { directory = "vendor/tiktoken-stub" }
+resolution-markers = [
+    "python_full_version >= '3.14' and platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version >= '3.14' and platform_system == 'FreeBSD' and sys_platform == 'freebsd'",
+    "python_full_version == '3.13.*' and platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*' and platform_system == 'FreeBSD' and sys_platform == 'freebsd'",
+    "python_full_version < '3.13' and platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and platform_system == 'FreeBSD' and sys_platform == 'freebsd'",
+]
+
+[[package]]
 name = "tokenizers"
 version = "0.22.2"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
+    "python_full_version >= '3.14' and platform_system != 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version >= '3.14' and platform_system != 'FreeBSD' and sys_platform == 'freebsd'",
+    "python_full_version == '3.13.*' and sys_platform == 'win32'",
+    "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
+    "python_full_version == '3.13.*' and platform_system != 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*' and platform_system != 'FreeBSD' and sys_platform == 'freebsd'",
+    "python_full_version < '3.13' and sys_platform == 'win32'",
+    "python_full_version < '3.13' and sys_platform == 'emscripten'",
+    "python_full_version < '3.13' and platform_system != 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and platform_system != 'FreeBSD' and sys_platform == 'freebsd'",
+]
 dependencies = [
-    { name = "huggingface-hub" },
+    { name = "huggingface-hub", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/73/6f/f80cfef4a312e1fb34baf7d85c72d4411afde10978d4657f8cdd811d3ccc/tokenizers-0.22.2.tar.gz", hash = "sha256:473b83b915e547aa366d1eee11806deaf419e17be16310ac0a14077f1e28f917", size = 372115, upload-time = "2026-01-05T10:45:15.988Z" }
 wheels = [
@@ -5644,6 +5695,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fd/18/a545c4ea42af3df6effd7d13d250ba77a0a86fb20393143bbb9a92e434d4/tokenizers-0.22.2-cp39-abi3-win32.whl", hash = "sha256:a6bf3f88c554a2b653af81f3204491c818ae2ac6fbc09e76ef4773351292bc92", size = 2502363, upload-time = "2026-01-05T10:45:20.593Z" },
     { url = "https://files.pythonhosted.org/packages/65/71/0670843133a43d43070abeb1949abfdef12a86d490bea9cd9e18e37c5ff7/tokenizers-0.22.2-cp39-abi3-win_amd64.whl", hash = "sha256:c9ea31edff2968b44a88f97d784c2f16dc0729b8b143ed004699ebca91f05c48", size = 2747786, upload-time = "2026-01-05T10:45:18.411Z" },
     { url = "https://files.pythonhosted.org/packages/72/f4/0de46cfa12cdcbcd464cc59fde36912af405696f687e53a091fb432f694c/tokenizers-0.22.2-cp39-abi3-win_arm64.whl", hash = "sha256:9ce725d22864a1e965217204946f830c37876eee3b2ba6fc6255e8e903d5fcbc", size = 2612133, upload-time = "2026-01-05T10:45:17.232Z" },
+]
+
+[[package]]
+name = "tokenizers"
+version = "0.22.2+strix"
+source = { directory = "vendor/tokenizers-stub" }
+resolution-markers = [
+    "python_full_version >= '3.14' and platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version >= '3.14' and platform_system == 'FreeBSD' and sys_platform == 'freebsd'",
+    "python_full_version == '3.13.*' and platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version == '3.13.*' and platform_system == 'FreeBSD' and sys_platform == 'freebsd'",
+    "python_full_version < '3.13' and platform_system == 'FreeBSD' and sys_platform != 'emscripten' and sys_platform != 'freebsd' and sys_platform != 'win32'",
+    "python_full_version < '3.13' and platform_system == 'FreeBSD' and sys_platform == 'freebsd'",
 ]
 
 [[package]]
@@ -5836,10 +5900,10 @@ name = "typer"
 version = "0.24.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "annotated-doc" },
-    { name = "click" },
-    { name = "rich" },
-    { name = "shellingham" },
+    { name = "annotated-doc", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "click", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "rich", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "shellingham", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f5/24/cb09efec5cc954f7f9b930bf8279447d24618bb6758d4f6adf2574c41780/typer-0.24.1.tar.gz", hash = "sha256:e39b4732d65fbdcde189ae76cf7cd48aeae72919dea1fdfc16593be016256b45", size = 118613, upload-time = "2026-02-21T16:54:40.609Z" }
 wheels = [

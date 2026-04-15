@@ -53,6 +53,9 @@ dependencies = [
   "defusedxml>=0.7.1",
   # Direct dep so [tool.uv.sources] pins our stdlib shim (litellm also requires fastuuid).
   "fastuuid>=0.13.0",
+  # litellm deps; on FreeBSD PyPI ships no wheels (Rust). Path overrides below for that OS only.
+  "tiktoken>=0.7.0",
+  "tokenizers>=0.13",
 ]
 
 [project.scripts]
@@ -62,6 +65,9 @@ strix = "strix.interface.main:main"
 # PyPI fastuuid is Rust wheels only (no FreeBSD); source builds need maturin + Rust.
 # litellm uses it as a uuid drop-in — stdlib is sufficient for Strix.
 fastuuid = { path = "vendor/fastuuid-stub", editable = false }
+# tiktoken/tokenizers: PyPI wheels exclude FreeBSD; builds need Rust. Stubs are rough token estimates.
+tiktoken = { path = "vendor/tiktoken-stub", editable = false, marker = "platform_system == 'FreeBSD'" }
+tokenizers = { path = "vendor/tokenizers-stub", editable = false, marker = "platform_system == 'FreeBSD'" }
 
 [project.optional-dependencies]
 vertex = ["google-cloud-aiplatform>=1.38"]

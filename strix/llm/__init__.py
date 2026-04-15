@@ -1,4 +1,5 @@
 import logging
+import platform
 import warnings
 
 import litellm
@@ -13,6 +14,10 @@ __all__ = [
     "LLMConfig",
     "LLMRequestFailedError",
 ]
+
+# Avoid Hugging Face `tokenizers` paths when using the FreeBSD import shim (no Rust wheels).
+if platform.system() == "FreeBSD":
+    litellm.disable_hf_tokenizer_download = True
 
 litellm._logging._disable_debugging()
 litellm.suppress_debug_info = True
