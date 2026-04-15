@@ -62,11 +62,14 @@ Install the following **before** cloning the repository. Every OS needs **Python
 | Requirement | Notes |
 |-------------|--------|
 | **Python 3.12+** | `sudo pkg install -y python312` (or newer `python3xx` if available). Check with `python3.12 --version`. |
+| **Rust (rustc + cargo)** | **Required before `uv sync`.** Some dependencies (for example **`pydantic-core`**) have **no FreeBSD wheels** on PyPI and are built with **maturin**; without a system compiler, the isolated build fails with errors like `Unsupported platform: 312` or `can't find Rust compiler`. Install Rust, then confirm `rustc --version` and `cargo --version` are on your `PATH`: `sudo pkg install -y rust` (or `lang/rust` from ports, depending on your tree). |
 | **uv** | Official installer: `curl -LsSf https://astral.sh/uv/install.sh | sh` — or install from ports/packages if your tree provides `uv`. |
 | **Git** | `sudo pkg install -y git` |
 | **Podman** | `sudo pkg install -y podman` — configure and start Podman per [Podman on FreeBSD](https://podman.io/). This fork defaults to **Podman** on FreeBSD (`strix/config/config.py`); use `STRIX_RUNTIME_BACKEND=podman` if you need to force it. Confirm with `podman info`. |
 
 ### Clone and install dependencies
+
+**FreeBSD:** install **Rust** (see prerequisites table) *before* the steps below so `uv sync` can build wheels that are missing for this platform (for example `pydantic-core`).
 
 ```bash
 git clone https://github.com/xoro/strix.git
@@ -130,6 +133,7 @@ uv run strix -n --target https://example.com --scan-mode quick
 | `LLM_API_KEY` errors | Export the key for your provider; for Copilot models use `uv run strix --auth-github-copilot` instead of an API key. |
 | `uv` not found | Install [uv](https://docs.astral.sh/uv/) and ensure it is on your `PATH`, or invoke it with an absolute path. |
 | FreeBSD: Docker expected | Use Podman and this fork’s defaults, or set `STRIX_RUNTIME_BACKEND=podman`. |
+| FreeBSD: `pydantic-core`, `maturin`, “Unsupported platform”, or “Rust not found” during `uv sync` | Install a **system Rust** toolchain so source builds can compile (see **Rust** row under FreeBSD prerequisites). Ensure `rustc` is on `PATH` in the same shell, then run `uv sync` again. |
 
 ---
 
