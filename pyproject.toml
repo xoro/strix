@@ -51,10 +51,17 @@ dependencies = [
   "opentelemetry-exporter-otlp-proto-http>=1.40.0",
   "scrubadub>=2.0.1",
   "defusedxml>=0.7.1",
+  # Direct dep so [tool.uv.sources] pins our stdlib shim (litellm also requires fastuuid).
+  "fastuuid>=0.13.0",
 ]
 
 [project.scripts]
 strix = "strix.interface.main:main"
+
+[tool.uv.sources]
+# PyPI fastuuid is Rust wheels only (no FreeBSD); source builds need maturin + Rust.
+# litellm uses it as a uuid drop-in — stdlib is sufficient for Strix.
+fastuuid = { path = "vendor/fastuuid-stub", editable = false }
 
 [project.optional-dependencies]
 vertex = ["google-cloud-aiplatform>=1.38"]
@@ -170,6 +177,7 @@ extend-exclude = [
     "build",
     "dist",
     "migrations",
+    "vendor",
 ]
 
 [tool.ruff.lint]
