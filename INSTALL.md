@@ -74,9 +74,9 @@ Install the following **before** cloning the repository. Every OS needs **Python
 Use a fresh **FreeBSD 15.0 or later** install with **`pkg`**. Run **root-only** lines after **`su -l root`**, **`doas sh`**, or **`sudo sh`**; run **user** lines as a normal account (replace **`youruser`**). **Rust** is required before **`uv sync`** so **`pydantic-core`** can compile.
 
 ```sh
-# --- [root] Base packages
+# --- [root] Base packages (uv from pkg → typically /usr/local/bin/uv)
 pkg update
-pkg install -y python312 rust git podman curl
+pkg install -y python312 rust git podman uv
 
 # --- [root] Podman API socket at boot (Strix needs /var/run/podman/podman.sock)
 sysrc podman_enable=YES
@@ -93,9 +93,8 @@ grep -q '^pf_load=' /boot/loader.conf 2>/dev/null || echo 'pf_load="YES"' >> /bo
 # --- [root] Optional: let a normal user open the socket without sudo (then log out/in)
 # pw groupmod operator -m youruser
 
-# --- [user] Install uv (https://docs.astral.sh/uv/getting-started/installation/)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-export PATH="$HOME/.local/bin:$PATH"
+# --- [user] Confirm uv (already installed via pkg; ensure /usr/local/bin is on PATH)
+command -v uv
 
 # --- [user] Clone and install Strix (production deps only; recommended on FreeBSD)
 git clone https://github.com/xoro/strix.git
