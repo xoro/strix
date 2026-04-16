@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 import secrets
@@ -214,27 +215,9 @@ class PodmanRuntime(AbstractRuntime):
                 f"podman start failed: {result.stderr.strip()}",
             )
 
-    @staticmethod
-    def _get_container_ip(container_name: str) -> str | None:
-        result = subprocess.run(  # noqa: S603
-            _podman_cli_argv()  # noqa: S607
-            + [
-                "inspect",
-                container_name,
-                "--format",
-                "{{.NetworkSettings.IPAddress}}",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-        )
-        ip_addr = result.stdout.strip()
-        if result.returncode == 0 and ip_addr:
-            return ip_addr
-        return None
-
     def _wait_for_tool_server(self, max_retries: int = 30, timeout: int = 5) -> None:
+        # FreeBSD: use the published host port on loopback. Bridge IPs from ``podman inspect`` are
+        # often wrong for host-to-container HTTP with Podman on FreeBSD.
         host = self._resolve_host()
         port = CONTAINER_TOOL_SERVER_PORT if self._container_ip else self._tool_server_port
         health_url = f"http://{host}:{port}/health"
@@ -306,9 +289,6 @@ class PodmanRuntime(AbstractRuntime):
                     )
                     self._start_container(container_name)
 
-                if self._is_freebsd():
-                    self._container_ip = self._get_container_ip(container_name)
-
                 container_obj = self.client.containers.get(container_name)
                 self._scan_container = container_obj
                 self._wait_for_tool_server()
@@ -331,13 +311,46 @@ class PodmanRuntime(AbstractRuntime):
             f"Container creation failed after {max_retries + 1} attempts: {last_error}",
         ) from last_error
 
-    def _remove_existing_container(self, container_name: str) -> None:
+    def _podman_rm_force_cli(self, container_name: str) -> None:
+        """Run ``podman rm -f`` via CLI (FreeBSD: ``doas -n`` / ``sudo -n`` + absolute ``podman``)."""
         subprocess.run(  # noqa: S603
-            _podman_cli_argv() + ["rm", "-f", container_name],  # noqa: S607
+            [*_podman_cli_argv(), "rm", "-f", container_name],
             capture_output=True,
-            timeout=120,
+            timeout=180,
             check=False,
         )
+
+    def _remove_existing_container(self, container_name: str) -> None:
+        """Drop a leftover scan container: Podman API first, then CLI."""
+        from podman.errors import NotFound  # type: ignore[import-untyped]
+
+        try:
+            existing = self.client.containers.get(container_name)
+        except NotFound:
+            time.sleep(0.5)
+            return
+        except (self._api_error_cls, OSError, RequestsConnectionError, RequestsTimeout) as e:
+            logger.debug(
+                "Podman API get failed for %s (%s); falling back to CLI rm",
+                container_name,
+                e,
+            )
+            self._podman_rm_force_cli(container_name)
+            time.sleep(0.5)
+            return
+
+        try:
+            with contextlib.suppress(Exception):
+                existing.stop(timeout=10)
+            existing.remove(force=True)
+        except (self._api_error_cls, OSError, RequestsConnectionError, RequestsTimeout) as e:
+            logger.debug(
+                "Podman API remove failed for %s (%s); falling back to CLI rm",
+                container_name,
+                e,
+                exc_info=True,
+            )
+            self._podman_rm_force_cli(container_name)
         time.sleep(0.5)
 
     def _reset_connection_state(self) -> None:
@@ -422,8 +435,6 @@ class PodmanRuntime(AbstractRuntime):
 
             self._scan_container = container
             self._recover_container_state(container)
-            if self._is_freebsd():
-                self._container_ip = self._get_container_ip(container_name)
         except NotFound:
             pass
         else:
@@ -442,9 +453,6 @@ class PodmanRuntime(AbstractRuntime):
 
                 self._scan_container = container
                 self._recover_container_state(container)
-                if self._is_freebsd():
-                    c_name = getattr(container, "name", container_name)
-                    self._container_ip = self._get_container_ip(c_name)
                 return container
         except Exception:  # noqa: BLE001, S110
             pass
