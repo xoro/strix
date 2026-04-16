@@ -66,14 +66,65 @@ Install the following **before** cloning the repository. Every OS needs **Python
 | **GCC (`gfortran`)** | **Fortran** is required only if you build **SciPy** and similar stacks from source (for example after re-adding **`scrubadub`** / **sklearn**). There is **no** separate `gfortran` package in `pkg search` — **`gfortran`** ships with **GCC**. Install a compiler package such as **`gcc14`**, then optionally the **`gcc`** meta-port so **`/usr/local/bin/gfortran`** and **`gcc`** exist: `sudo pkg install -y gcc14 gcc`. Confirm with `gfortran --version`. For **Meson** builds you also want **`pkgconf`** (provides **`pkg-config`**): `sudo pkg install -y pkgconf`. The default **xoro/strix** tree **omits scrubadub on FreeBSD**, so a normal **`uv sync`** does **not** need GCC for Fortran unless you change dependencies. |
 | **uv** | **Astral:** one-line install from [uv installation](https://docs.astral.sh/uv/getting-started/installation/) (typically `curl -LsSf https://astral.sh/uv/install.sh` piped to `sh`). **Or** use packages: `sudo pkg install -y uv` when your repositories provide it (version may lag the installer). |
 | **Git** | `sudo pkg install -y git` |
-| **Podman** | `sudo pkg install -y podman` — see [Podman on FreeBSD](https://podman.io/). This fork defaults to **Podman** (`strix/config/config.py`); use `STRIX_RUNTIME_BACKEND=podman` if needed. **`podman info`** and **`podman ps`** can work even when **`/var/run/podman/podman.sock`** is missing: Strix uses the **`docker`** **Python** SDK, which talks to Podman’s **Docker-compatible HTTP API** on that socket. Start the API listener (as root), e.g. **`mkdir -p /var/run/podman`** then **`podman system service --time=0 unix:///var/run/podman/podman.sock`** (foreground; use **`&`**, **tmux**, or an **rc.d** wrapper for persistence). Then **`ls -l /var/run/podman/podman.sock`** should succeed. Default **`DOCKER_HOST=unix:///var/run/podman/podman.sock`** is set when unset. You do **not** need the **`docker`** OS package. Podman is **root-only** on FreeBSD — use **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** from a normal user so **`$HOME`** keeps **GitHub Copilot** tokens (`-E` preserves the environment). **Linux** sandbox images need **`podman pull --platform linux/amd64 …`** on FreeBSD. |
+| **Podman** | `sudo pkg install -y podman` — see [Podman on FreeBSD](https://podman.io/). This fork defaults to **Podman** (`strix/config/config.py`); use `STRIX_RUNTIME_BACKEND=podman` if needed. Strix uses the **`docker`** Python SDK against Podman’s **Docker-compatible API** on **`/var/run/podman/podman.sock`** (set **`DOCKER_HOST`** when unset). You do **not** need the **`docker`** OS package. Enable **`podman_service`** at boot (see **vanilla** recipe below) or run **`podman system service --time=0 unix:///var/run/podman/podman.sock`** manually. For **GitHub Copilot** from a non-root user, either add the user to **`operator`** (socket group) or run **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`**. Sandbox image **platform** (`linux/arm64` vs `linux/amd64`) follows the host CPU — see **FreeBSD — sandbox image**. |
 | **GNU make (`gmake`)** | **If** you build **ruff** from source (for example after re-adding it to dev dependencies), the **jemalloc** step may invoke **`gmake`**. Without it you can see `failed to execute command` / “No such file or directory”. Install: `sudo pkg install -y gmake`. The default **dev** dependency set on **FreeBSD omits `ruff`** (see below) to avoid huge Rust builds on small hosts, so **`gmake`** is often unnecessary for `uv sync` on FreeBSD. **Not needed** for a minimal CLI install — use `make install` or `uv sync --no-dev`. |
+
+### FreeBSD: vanilla system (step-by-step)
+
+Use a fresh **FreeBSD 13+** install with **`pkg`** (e.g. **15.x**). Run **root-only** lines after **`su -l root`**, **`doas sh`**, or **`sudo sh`**; run **user** lines as a normal account (replace **`youruser`**). **Rust** is required before **`uv sync`** so **`pydantic-core`** can compile.
+
+```sh
+# --- [root] Base packages
+pkg update
+pkg install -y python312 rust git podman curl
+
+# --- [root] Podman API socket at boot (Strix needs /var/run/podman/podman.sock)
+sysrc podman_enable=YES
+sysrc podman_service_enable=YES
+service podman start
+service podman_service start
+ls -l /var/run/podman/podman.sock
+
+# --- [root] pf kernel module (required for default CNI bridge / Linux OCI containers)
+kldload pf 2>/dev/null || true
+kldstat | grep pf || true
+grep -q '^pf_load=' /boot/loader.conf 2>/dev/null || echo 'pf_load="YES"' >> /boot/loader.conf
+
+# --- [root] Optional: let a normal user open the socket without sudo (then log out/in)
+# pw groupmod operator -m youruser
+
+# --- [user] Install uv (https://docs.astral.sh/uv/getting-started/installation/)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+
+# --- [user] Clone and install Strix (production deps only; recommended on FreeBSD)
+git clone https://github.com/xoro/strix.git
+cd strix
+make install
+
+# --- [user] LLM — pick one:
+# API key provider:
+export STRIX_LLM="openai/gpt-5.4"
+export LLM_API_KEY="your-api-key"
+# OR GitHub Copilot (no LLM_API_KEY):
+# export STRIX_LLM="github_copilot/gpt-4o"
+# uv run strix --auth-github-copilot
+
+# --- [user] Smoke test (authorized target only)
+uv run strix -n --target https://example.com --scan-mode quick
+```
+
+**Notes:**
+
+- If you **did not** add **`youruser`** to **`operator`**, run Strix with **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** so the process can open the socket, or stay on **root** for quick tests.
+- First run may **pull** the sandbox image (large); Strix chooses **`linux/arm64`** vs **`linux/amd64`** from **`uname -m`**. Optional manual pre-pull: see **FreeBSD — sandbox image** below.
+- **Developer install** (`make setup-dev`) instead of **`make install`**: see **FreeBSD — two paths** below; expect **ruff** / heavy builds to be problematic on small **ARM64** hosts.
 
 ### Clone and install dependencies
 
 **FreeBSD — two paths:**
 
-1. **Run Strix only (recommended on FreeBSD)** — production dependencies only; skips **pytest**, **mypy**, and other dev-only tools. You still need **Rust** for packages like **`pydantic-core`** (see table above).
+1. **Run Strix only (recommended on FreeBSD)** — same as the **vanilla** block above: production dependencies only; skips **pytest**, **mypy**, and other dev-only tools. You still need **Rust** for packages like **`pydantic-core`** (see table above).
 
    ```bash
    git clone https://github.com/xoro/strix.git
