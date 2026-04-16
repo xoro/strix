@@ -1000,8 +1000,8 @@ version = "7.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "requests", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
-    { name = "urllib3", marker = "platform_system != 'FreeBSD' or sys_platform == 'emscripten' or sys_platform == 'win32'" },
+    { name = "requests" },
+    { name = "urllib3" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/91/9b/4a2ea29aeba62471211598dac5d96825bb49348fa07e906ea930394a83ce/docker-7.1.0.tar.gz", hash = "sha256:ad8c70e6e3f8926cb8a92619b832b4ea5299e2831c14284663184e200546fa6c", size = 117834, upload-time = "2024-05-23T11:13:57.216Z" }
 wheels = [
@@ -5432,7 +5432,7 @@ source = { editable = "." }
 dependencies = [
     { name = "cvss" },
     { name = "defusedxml" },
-    { name = "docker", marker = "platform_system != 'FreeBSD'" },
+    { name = "docker" },
     { name = "fastuuid" },
     { name = "litellm", marker = "(platform_system != 'FreeBSD' and sys_platform == 'emscripten') or (platform_system != 'FreeBSD' and sys_platform == 'win32') or (sys_platform != 'emscripten' and sys_platform != 'win32')" },
     { name = "litellm", extra = ["proxy"], marker = "platform_system != 'FreeBSD'" },
@@ -5489,7 +5489,7 @@ dev = [
 requires-dist = [
     { name = "cvss", specifier = ">=3.2" },
     { name = "defusedxml", specifier = ">=0.7.1" },
-    { name = "docker", marker = "platform_system != 'FreeBSD'", specifier = ">=7.1.0" },
+    { name = "docker", specifier = ">=7.1.0" },
     { name = "fastapi", marker = "extra == 'sandbox'" },
     { name = "fastuuid", directory = "vendor/fastuuid-stub" },
     { name = "google-cloud-aiplatform", marker = "extra == 'vertex'", specifier = ">=1.38" },

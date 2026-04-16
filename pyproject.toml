@@ -41,7 +41,9 @@ dependencies = [
   "tenacity>=9.0.0",
   "pydantic[email]>=2.11.3",
   "rich",
-  "docker>=7.1.0; platform_system != 'FreeBSD'",
+  # Docker SDK: used for image pull / checks. On FreeBSD the engine is Podman; the client uses its
+  # Docker-compatible API (same as DOCKER_HOST=unix:///var/run/podman/podman.sock).
+  "docker>=7.1.0",
   "podman>=5.0.0; platform_system == 'FreeBSD'",
   "textual>=6.0.0",
   "xmltodict>=0.13.0",

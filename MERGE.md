@@ -85,7 +85,7 @@ miss. Use **`platform_system == 'FreeBSD'`** (matches `platform.system()`).
 
 | Concern | Fork pattern |
 |--------|----------------|
-| Docker vs Podman | `"docker>=…; platform_system != 'FreeBSD'"` and `"podman>=…; platform_system == 'FreeBSD'"` |
+| Docker vs Podman | **`docker`** PyPI package on **all** platforms (Docker SDK talks to Podman’s API on FreeBSD via **`DOCKER_HOST`** / default socket). **`podman`** PyPI only on FreeBSD for runtime bindings. |
 | LiteLLM extras | `"litellm[proxy]>=…; platform_system != 'FreeBSD'"` and plain `"litellm>=…; platform_system == 'FreeBSD'"` (`[proxy]` pulls **pyroscope-io**, no FreeBSD wheels). |
 | Traceloop | `"traceloop-sdk>=…; platform_system != 'FreeBSD'"` if upstream adds it unguarded. |
 | scrubadub / sklearn / scipy | `"scrubadub>=…; platform_system != 'FreeBSD'"` — avoids **scikit-learn** → **SciPy** source builds on FreeBSD. |

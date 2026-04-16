@@ -338,25 +338,31 @@ def validate_environment() -> None:  # noqa: PLR0912, PLR0915
 
 
 def check_docker_installed() -> None:
-    if shutil.which("docker") is None:
-        console = Console()
-        error_text = Text()
-        error_text.append("DOCKER NOT INSTALLED", style="bold red")
-        error_text.append("\n\n", style="white")
-        error_text.append("The 'docker' CLI was not found in your PATH.\n", style="white")
-        error_text.append(
-            "Please install Docker and ensure the 'docker' command is available.\n\n", style="white"
-        )
+    if shutil.which("docker") is not None:
+        return
+    if sys.platform.startswith("freebsd") and shutil.which("podman") is not None:
+        return
+    console = Console()
+    error_text = Text()
+    error_text.append("CONTAINER CLI NOT FOUND", style="bold red")
+    error_text.append("\n\n", style="white")
+    error_text.append(
+        "Neither 'docker' nor (on FreeBSD) 'podman' was found in your PATH.\n", style="white"
+    )
+    error_text.append(
+        "Install Docker or Podman and ensure the command is available, then try again.\n\n",
+        style="white",
+    )
 
-        panel = Panel(
-            error_text,
-            title="[bold white]STRIX",
-            title_align="left",
-            border_style="red",
-            padding=(1, 2),
-        )
-        console.print("\n", panel, "\n")
-        sys.exit(1)
+    panel = Panel(
+        error_text,
+        title="[bold white]STRIX",
+        title_align="left",
+        border_style="red",
+        padding=(1, 2),
+    )
+    console.print("\n", panel, "\n")
+    sys.exit(1)
 
 
 async def warm_up_llm() -> None:

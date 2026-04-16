@@ -1350,15 +1350,18 @@ def clone_repository(repo_url: str, run_name: str, dest_name: str | None = None)
 # Docker utilities
 def check_docker_connection() -> Any:
     try:
+        if sys.platform.startswith("freebsd") and not os.getenv("DOCKER_HOST"):
+            os.environ["DOCKER_HOST"] = "unix:///var/run/podman/podman.sock"
         return docker.from_env()
     except DockerException:
         console = Console()
         error_text = Text()
         error_text.append("DOCKER NOT AVAILABLE", style="bold red")
         error_text.append("\n\n", style="white")
-        error_text.append("Cannot connect to Docker daemon.\n", style="white")
+        error_text.append("Cannot connect to the container engine.\n", style="white")
         error_text.append(
-            "Please ensure Docker Desktop is installed and running, and try running strix again.\n",
+            "On FreeBSD use Podman as root or set DOCKER_HOST to your Podman socket "
+            "(default unix:///var/run/podman/podman.sock). On other systems ensure Docker is running.\n",
             style="white",
         )
 
