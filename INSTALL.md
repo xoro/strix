@@ -66,7 +66,7 @@ Install the following **before** cloning the repository. Every OS needs **Python
 | **GCC (`gfortran`)** | **Fortran** is required only if you build **SciPy** and similar stacks from source (for example after re-adding **`scrubadub`** / **sklearn**). There is **no** separate `gfortran` package in `pkg search` — **`gfortran`** ships with **GCC**. Install a compiler package such as **`gcc14`**, then optionally the **`gcc`** meta-port so **`/usr/local/bin/gfortran`** and **`gcc`** exist: `sudo pkg install -y gcc14 gcc`. Confirm with `gfortran --version`. For **Meson** builds you also want **`pkgconf`** (provides **`pkg-config`**): `sudo pkg install -y pkgconf`. The default **xoro/strix** tree **omits scrubadub on FreeBSD**, so a normal **`uv sync`** does **not** need GCC for Fortran unless you change dependencies. |
 | **uv** | **Astral:** one-line install from [uv installation](https://docs.astral.sh/uv/getting-started/installation/) (typically `curl -LsSf https://astral.sh/uv/install.sh` piped to `sh`). **Or** use packages: `sudo pkg install -y uv` when your repositories provide it (version may lag the installer). |
 | **Git** | `sudo pkg install -y git` |
-| **Podman** | `sudo pkg install -y podman` — configure and start Podman per [Podman on FreeBSD](https://podman.io/). This fork defaults to **Podman** on FreeBSD (`strix/config/config.py`); use `STRIX_RUNTIME_BACKEND=podman` if you need to force it. Confirm with `podman info`. Strix also installs the **`docker`** **Python** SDK: it talks to Podman’s **Docker-compatible API** (default **`DOCKER_HOST=unix:///var/run/podman/podman.sock`** when unset). You do **not** need the **`docker`** OS package. Podman is **root-only** on FreeBSD — run Strix as root for the container step, e.g. **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** (`-E` keeps **`$HOME`** so **GitHub Copilot** tokens in your user config still work). |
+| **Podman** | `sudo pkg install -y podman` — see [Podman on FreeBSD](https://podman.io/). This fork defaults to **Podman** (`strix/config/config.py`); use `STRIX_RUNTIME_BACKEND=podman` if needed. **`podman info`** and **`podman ps`** can work even when **`/var/run/podman/podman.sock`** is missing: Strix uses the **`docker`** **Python** SDK, which talks to Podman’s **Docker-compatible HTTP API** on that socket. Start the API listener (as root), e.g. **`mkdir -p /var/run/podman`** then **`podman system service --time=0 unix:///var/run/podman/podman.sock`** (foreground; use **`&`**, **tmux**, or an **rc.d** wrapper for persistence). Then **`ls -l /var/run/podman/podman.sock`** should succeed. Default **`DOCKER_HOST=unix:///var/run/podman/podman.sock`** is set when unset. You do **not** need the **`docker`** OS package. Podman is **root-only** on FreeBSD — use **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** from a normal user so **`$HOME`** keeps **GitHub Copilot** tokens (`-E` preserves the environment). **Linux** sandbox images need **`podman pull --platform linux/amd64 …`** on FreeBSD. |
 | **GNU make (`gmake`)** | **If** you build **ruff** from source (for example after re-adding it to dev dependencies), the **jemalloc** step may invoke **`gmake`**. Without it you can see `failed to execute command` / “No such file or directory”. Install: `sudo pkg install -y gmake`. The default **dev** dependency set on **FreeBSD omits `ruff`** (see below) to avoid huge Rust builds on small hosts, so **`gmake`** is often unnecessary for `uv sync` on FreeBSD. **Not needed** for a minimal CLI install — use `make install` or `uv sync --no-dev`. |
 
 ### Clone and install dependencies
@@ -126,10 +126,12 @@ After prerequisites above, pull the sandbox image once (tag matches `STRIX_IMAGE
 To use the **latest tag expected by your checkout**, read it from the repo: open `strix/config/config.py` and copy the value of **`strix_image`** (or run `grep strix_image strix/config/config.py` from the repository root after `git pull`).
 
 ```sh
-podman pull ghcr.io/usestrix/strix-sandbox:0.1.13
+podman pull --platform linux/amd64 ghcr.io/usestrix/strix-sandbox:0.1.13
 ```
 
-If `uv run strix` fails to reach the runtime, check `podman info` and that **Podman** can run containers.
+If Strix says the **container engine** is unavailable: ensure **`podman system service`** is running so **`/var/run/podman/podman.sock`** exists (see **Podman** row above). **`podman info`** alone is not enough to verify the API socket.
+
+**ZFS (optional):** if Podman’s store was under **`zroot/ROOT/…`** and **`podman`/`zfs destroy`** errors mention **dependent clones** across boot environments, move **`graphroot`** to a dedicated dataset (e.g. **`zroot/podman`** mounted at **`/var/db/containers`**) per **`/usr/local/etc/containers/storage.conf`** — see **Podman**/**ZFS** docs or your sysadmin runbook.
 
 ---
 
@@ -164,6 +166,7 @@ uv run strix -n --target https://example.com --scan-mode quick
 | FreeBSD: **PyInstaller** / bootloader / `ieeefp.h` / `__BEGIN_DECLS` during `uv sync` | Current trees skip PyInstaller on FreeBSD. **`git pull`** and run **`uv sync`** again. Release binaries are built on CI / non-FreeBSD hosts. |
 | FreeBSD: **pre-commit** / **ruff** hooks fail | The **ruff-pre-commit** hooks expect a supported platform binary. Skip them for one commit: `SKIP=ruff-lint,ruff-format git commit …`, or rely on **CI** for lint/format. |
 | FreeBSD: **`scipy`** / **`scikit-learn`** / **Unknown compiler `gfortran`** / **`pkg-config`** during `uv sync` | **`scrubadub`** pulls **sklearn** → **SciPy**, which often builds from source on FreeBSD. This tree **omits scrubadub on FreeBSD** (regex redaction in telemetry instead). **`git pull`** and **`uv sync`** again. To build SciPy yourself you would need **`pkg install pkgconf`** and a GCC with **`gfortran`** (e.g. **`gcc14`**) plus enough RAM/swap. |
+| FreeBSD: **container engine** / **`podman.sock`** missing / Strix cannot pull image | **`service podman start`** may not open the **Docker API** socket. Run **`podman system service --time=0 unix:///var/run/podman/podman.sock`** (see **Podman** prerequisite row). Verify **`ls -l /var/run/podman/podman.sock`**. |
 
 ---
 
