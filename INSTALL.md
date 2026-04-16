@@ -71,56 +71,69 @@ Install the following **before** cloning the repository. Every OS needs **Python
 
 ### FreeBSD: vanilla system (step-by-step)
 
-Use a fresh **FreeBSD 15.0 or later** install with **`pkg`**. Run **root-only** lines after **`su -l root`**, **`doas sh`**, or **`sudo sh`**; run **user** lines as a normal account (replace **`youruser`**). **Rust** is required before **`uv sync`** so **`pydantic-core`** can compile.
+Target: **FreeBSD 15.0+** with **`pkg`**. Run **`[root]`** steps as **`root`** (`su -l root`, **`doas sh`**, etc.); run **`[user]`** steps as your login (replace **`youruser`**). **Rust** must be installed before syncing so **`pydantic-core`** can build.
+
+**Why `sudo` is in the package list:** Strix runs **`sudo -n podman`** / **`doas -n podman`** for container CLI on FreeBSD (no rootless Podman). That requires **passwordless** approval for **`podman`**, *or* run the whole app as root — see **`[root] podman privilege`** below.
 
 ```sh
-# --- [root] Base packages (uv from pkg → typically /usr/local/bin/uv)
+# --- [root] Base packages
 pkg update
 pkg install -y python312 rust git podman uv sudo
 
-# --- [root] Podman API socket at boot (Strix needs /var/run/podman/podman.sock)
+# --- [root] Podman API at boot (Docker-compatible socket for Strix)
 sysrc podman_enable=YES
 sysrc podman_service_enable=YES
 service podman start
 service podman_service start
 ls -l /var/run/podman/podman.sock
 
-# --- [root] pf kernel module (required for default CNI bridge / Linux OCI containers)
+# --- [root] pf (required for default CNI bridge → Linux OCI images)
 kldload pf 2>/dev/null || true
 kldstat | grep pf || true
 grep -q '^pf_load=' /boot/loader.conf 2>/dev/null || echo 'pf_load="YES"' >> /boot/loader.conf
 
-# --- [root] Optional: let a normal user open the socket without sudo (then log out/in)
+# --- [root] Optional: non-root access to the API socket (then log out/in)
 pw groupmod operator -m youruser
 
-# --- [user] Clone and install Strix (production deps only; recommended on FreeBSD)
-cd ${HOME}
+# --- [root] podman privilege — pick ONE approach (normal user + Strix needs this):
+# A) sudo — create e.g. /usr/local/etc/sudoers.d/strix-podman with visudo:
+#    youruser ALL=(ALL) NOPASSWD: /usr/local/bin/podman
+# B) doas — in /usr/local/etc/doas.conf:
+#    permit nopass youruser cmd podman
+# C) Skip A/B and run Strix entirely as root when testing:
+#    sudo -E env HOME=$HOME PATH=$PATH uv run strix …
+# (If only `doas` exists and B is missing, `doas -n` will fail fast; install `sudo` or add B.)
+
+# --- [user] Clone and install (production deps only)
+cd "${HOME}"
 git clone https://github.com/xoro/strix.git
 cd strix
-uv --verbose sync
+make install
+# same as: uv sync --no-dev
+command -v uv
 
-# --- [user] LLM — pick one:
-# API key provider:
+# --- [user] LLM — choose one style:
+# OpenAI-compatible API key:
 # export STRIX_LLM="openai/gpt-5.4"
 # export LLM_API_KEY="your-api-key"
-# OR GitHub Copilot (no LLM_API_KEY):
-export STRIX_LLM="github_copilot/claude-sonnet-4.6"
+# GitHub Copilot (no LLM_API_KEY):
+# export STRIX_LLM="github_copilot/gpt-4o"
 # uv run strix --auth-github-copilot
 
-# --- [user] Smoke tests (authorized targets only)
-# Black-box: URL, domain, or IP (no local source tree shipped into the sandbox)
-uv run strix --non-interactive --target 127.0.0.1 --scan-mode quick
-# White-box: existing local directory (source code on disk; path must be readable)
+# --- [user] Smoke tests (only systems you are allowed to test)
+# Black-box — URL, hostname, or IP:
+uv run strix --non-interactive --target https://example.com --scan-mode quick
+# White-box — existing source directory on disk:
 # uv run strix --non-interactive --target /path/to/your/project --scan-mode quick
 ```
 
 **Notes:**
 
-- **Black-box** targets are URLs, hostnames, or IPs tested without your source tree. **White-box** targets are **existing directory paths** (`local_code`); Strix copies that tree into the sandbox for review.
-- If you **did not** add **`youruser`** to **`operator`**, run Strix with **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** so the process can open the socket, or stay on **root** for quick tests.
-- **Podman CLI as root:** FreeBSD has **no rootless** Podman. When you run Strix as a normal user, it runs **`sudo -n podman`** / **`doas -n podman`** (non-interactive). Password prompts **do not work** from Strix’s subprocesses — configure **`NOPASSWD`** for **`/usr/local/bin/podman`** in **`sudoers`**, or **`permit nopass youruser cmd podman`** in **`/usr/local/etc/doas.conf`**, or run the whole CLI as root: **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** (then Strix uses plain **`podman`**).
-- First run may **pull** the sandbox image (large); Strix chooses **`linux/arm64`** vs **`linux/amd64`** from **`uname -m`**. Optional manual pre-pull: see **FreeBSD — sandbox image** below.
-- **Developer install** (`make setup-dev`) instead of **`make install`**: see **FreeBSD — two paths** below; expect **ruff** / heavy builds to be problematic on small **ARM64** hosts.
+- **Black-box** = URL / hostname / IP. **White-box** = **directory path**; Strix copies it into the sandbox (`local_code`).
+- **Socket:** default **`DOCKER_HOST=unix:///var/run/podman/podman.sock`** when unset. Without **`operator`** membership, use **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** so the API client can open the socket, or run as **root**.
+- **Podman CLI:** FreeBSD has **no rootless** mode; Strix uses **`sudo -n`** / **`doas -n`** so interactive password prompts are not relied on. Configure **A** or **B** above, or use **C**.
+- First run may **pull** the large sandbox image; arch is **`linux/arm64`** vs **`linux/amd64`** from **`uname -m`**. Optional manual pull: **FreeBSD — sandbox image** below.
+- Full **dev** install (`make setup-dev`): **FreeBSD — two paths**; heavy **ruff** builds can OOM on small **ARM64** hosts.
 
 ### Clone and install dependencies
 
