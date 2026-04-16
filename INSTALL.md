@@ -139,6 +139,8 @@ Override automatic selection if needed: **`STRIX_CONTAINER_PLATFORM=linux/amd64`
 
 If Strix says the **container engine** is unavailable: ensure **`podman system service`** is running so **`/var/run/podman/podman.sock`** exists (see **Podman** row above). **`podman info`** alone is not enough to verify the API socket.
 
+**Socket group (`operator`):** the service socket is typically **`root:operator`** with mode **`0770`**. To run **`uv run strix`** as a normal user (not **`sudo`**), add your account to **`operator`**: **`sudo pw groupmod operator -m youruser`**, then log out and back in (or start a new login session). Alternatively use **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** so the client can open the socket as root while keeping **`$HOME`** for GitHub Copilot.
+
 **CNI / `pf`:** if **`podman start`** fails with **`The pf kernel module must be loaded to support ipMasq networks`**, Podman’s default bridge network needs the **pf** module. As root: **`kldload pf`** (verify with **`kldstat | grep pf`**). Persist across reboots with **`pf_load="YES"`** in **`/boot/loader.conf`**. Enabling the firewall also loads it: **`sysrc pf_enable=YES`** and a valid **`/etc/pf.conf`**, then **`service pf start`** — or ask your admin if **`pf`** is intentionally disabled.
 
 **ZFS (optional):** if Podman’s store was under **`zroot/ROOT/…`** and **`podman`/`zfs destroy`** errors mention **dependent clones** across boot environments, move **`graphroot`** to a dedicated dataset (e.g. **`zroot/podman`** mounted at **`/var/db/containers`**) per **`/usr/local/etc/containers/storage.conf`** — see **Podman**/**ZFS** docs or your sysadmin runbook.
