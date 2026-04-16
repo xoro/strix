@@ -12,7 +12,7 @@ It covers getting Strix running on **macOS**, **Debian / Linux**, **Windows**, a
 
 ## What you need on every platform
 
-1. **Sandbox image** — Strix runs tools inside `ghcr.io/usestrix/strix-sandbox` (pulled automatically on first run when Docker/Podman works). Override with `STRIX_IMAGE` if required.
+1. **Sandbox image** — Strix runs tools inside `ghcr.io/usestrix/strix-sandbox` (pulled automatically when missing, or when the local image’s CPU architecture does not match this host — e.g. after a wrong multi-arch pull). Override with `STRIX_IMAGE` if required.
 2. **LLM configuration** — Either:
    - **API key:** set `STRIX_LLM` (LiteLLM-style name, e.g. `openai/gpt-5.4`, `anthropic/claude-sonnet-4-6`) and `LLM_API_KEY`, or  
    - **GitHub Copilot:** set `STRIX_LLM` to `github_copilot/<model>` and run `uv run strix --auth-github-copilot` once (no `LLM_API_KEY`).

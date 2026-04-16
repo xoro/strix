@@ -1408,12 +1408,25 @@ def check_docker_connection() -> Any:
 
 
 def image_exists(client: Any, image_name: str) -> bool:
+    """Return True if a usable image is present (same CPU arch as ``linux_container_platform()``)."""
     try:
-        client.images.get(image_name)
+        img = client.images.get(image_name)
     except ImageNotFound:
         return False
-    else:
+    attrs = getattr(img, "attrs", None) or {}
+    local_arch = attrs.get("Architecture") or ""
+    if not local_arch:
         return True
+    from strix.utils.container_platform import (
+        expected_image_cpu_architecture,
+        normalize_oci_cpu_arch,
+    )
+
+    if normalize_oci_cpu_arch(local_arch) != normalize_oci_cpu_arch(
+        expected_image_cpu_architecture()
+    ):
+        return False
+    return True
 
 
 def update_layer_status(layers_info: dict[str, str], layer_id: str, layer_status: str) -> None:

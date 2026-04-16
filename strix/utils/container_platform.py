@@ -17,3 +17,21 @@ def linux_container_platform() -> str:
     if machine in ("aarch64", "arm64"):
         return "linux/arm64"
     return "linux/amd64"
+
+
+def normalize_oci_cpu_arch(arch: str) -> str:
+    """Normalize CPU arch strings from OCI / ``docker image inspect``."""
+    token = arch.strip().lower()
+    if token in ("aarch64", "arm64"):
+        return "arm64"
+    if token in ("x86_64", "amd64"):
+        return "amd64"
+    return token
+
+
+def expected_image_cpu_architecture() -> str:
+    """CPU architecture (e.g. ``arm64``, ``amd64``) Strix expects for the sandbox image."""
+    plat = linux_container_platform()
+    parts = plat.split("/", 1)
+    cpu = parts[1] if len(parts) == 2 else "amd64"
+    return normalize_oci_cpu_arch(cpu)
