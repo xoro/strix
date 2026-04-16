@@ -71,7 +71,7 @@ Install the following **before** cloning the repository. Every OS needs **Python
 
 ### FreeBSD: vanilla system (step-by-step)
 
-Use a fresh **FreeBSD 13+** install with **`pkg`** (e.g. **15.x**). Run **root-only** lines after **`su -l root`**, **`doas sh`**, or **`sudo sh`**; run **user** lines as a normal account (replace **`youruser`**). **Rust** is required before **`uv sync`** so **`pydantic-core`** can compile.
+Use a fresh **FreeBSD 15.0 or later** install with **`pkg`**. Run **root-only** lines after **`su -l root`**, **`doas sh`**, or **`sudo sh`**; run **user** lines as a normal account (replace **`youruser`**). **Rust** is required before **`uv sync`** so **`pydantic-core`** can compile.
 
 ```sh
 # --- [root] Base packages
