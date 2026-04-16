@@ -125,9 +125,17 @@ After prerequisites above, pull the sandbox image once (tag matches `STRIX_IMAGE
 
 To use the **latest tag expected by your checkout**, read it from the repo: open `strix/config/config.py` and copy the value of **`strix_image`** (or run `grep strix_image strix/config/config.py` from the repository root after `git pull`).
 
+Strix passes the correct **`--platform`** when it pulls the image (`linux/arm64` on AArch64 hosts, `linux/amd64` on typical x86_64). To pre-pull manually, match your CPU (see **`uname -m`**: **`aarch64`** / **`arm64`** → **`linux/arm64`**, else usually **`linux/amd64`**):
+
 ```sh
+# AArch64 (Apple Silicon, ARM servers, AArch64 FreeBSD, …)
+podman pull --platform linux/arm64 ghcr.io/usestrix/strix-sandbox:0.1.13
+
+# x86_64 / amd64 hosts
 podman pull --platform linux/amd64 ghcr.io/usestrix/strix-sandbox:0.1.13
 ```
+
+Override automatic selection if needed: **`STRIX_CONTAINER_PLATFORM=linux/amd64`** (for example to force the amd64 image with emulation on ARM).
 
 If Strix says the **container engine** is unavailable: ensure **`podman system service`** is running so **`/var/run/podman/podman.sock`** exists (see **Podman** row above). **`podman info`** alone is not enough to verify the API socket.
 

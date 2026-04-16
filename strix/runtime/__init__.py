@@ -11,6 +11,11 @@ class SandboxInitializationError(Exception):
         self.message = message
         self.details = details
 
+    def __str__(self) -> str:
+        if self.details:
+            return f"{self.message}: {self.details}"
+        return self.message
+
 
 _global_runtime: AbstractRuntime | None = None
 

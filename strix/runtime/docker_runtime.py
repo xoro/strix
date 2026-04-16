@@ -14,6 +14,7 @@ from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import Timeout as RequestsTimeout
 
 from strix.config import Config
+from strix.utils.container_platform import linux_container_platform
 
 from . import SandboxInitializationError
 from .runtime import AbstractRuntime, SandboxInfo
@@ -137,6 +138,7 @@ class DockerRuntime(AbstractRuntime):
                     detach=True,
                     name=container_name,
                     hostname=container_name,
+                    platform=linux_container_platform(),
                     ports={
                         f"{CONTAINER_TOOL_SERVER_PORT}/tcp": self._tool_server_port,
                         f"{CONTAINER_CAIDO_PORT}/tcp": self._caido_port,

@@ -13,6 +13,7 @@ from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import Timeout as RequestsTimeout
 
 from strix.config import Config
+from strix.utils.container_platform import linux_container_platform
 
 from . import SandboxInitializationError
 from .runtime import AbstractRuntime, SandboxInfo
@@ -57,7 +58,14 @@ class PodmanRuntime(AbstractRuntime):
             from podman import PodmanClient  # type: ignore[import-untyped]
             from podman.errors import APIError  # type: ignore[import-untyped]
 
-            podman_uri = os.getenv("CONTAINER_HOST") or self._detect_podman_socket()
+            # Prefer explicit Podman URI, then Docker's (set by check_docker_connection on FreeBSD),
+            # then auto-detect. Without DOCKER_HOST here, the first matching path from detection
+            # can differ from the socket docker-py used for pull/ping.
+            podman_uri = (
+                os.getenv("CONTAINER_HOST")
+                or os.getenv("DOCKER_HOST")
+                or self._detect_podman_socket()
+            )
             self.client: PodmanClient = PodmanClient(  # type: ignore[no-any-unimported]
                 base_url=podman_uri, timeout=PODMAN_TIMEOUT
             )
@@ -74,8 +82,10 @@ class PodmanRuntime(AbstractRuntime):
         except Exception as e:
             raise SandboxInitializationError(
                 "Podman is not available",
-                "Please ensure Podman is installed and the Podman socket is running. "
-                "Try: 'podman system service --time=0 &' or enable the podman socket service.",
+                "Please ensure Podman is installed, the Podman socket is running "
+                "(e.g. service podman_service start on FreeBSD), and the Python package "
+                "'podman' is installed (uv sync on FreeBSD). "
+                f"Underlying error: {type(e).__name__}: {e}",
             ) from e
 
         self._scan_container: object | None = None
@@ -260,6 +270,7 @@ class PodmanRuntime(AbstractRuntime):
                         image_name,
                         name=container_name,
                         hostname=container_name,
+                        platform=linux_container_platform(),
                         ports={f"{CONTAINER_TOOL_SERVER_PORT}/tcp": self._tool_server_port},
                         cap_add=["NET_ADMIN", "NET_RAW"],
                         labels={"strix-scan-id": scan_id},
@@ -315,15 +326,20 @@ class PodmanRuntime(AbstractRuntime):
         env_vars: dict[str, str],
         scan_id: str,
     ) -> None:
+        # Map the host port we already chose to the tool server port in the container (same as
+        # DockerRuntime ports={f"{CONTAINER_TOOL_SERVER_PORT}/tcp": host_port}). A lone "-p 48081"
+        # does not bind to self._tool_server_port and breaks publish + health checks on FreeBSD.
         cmd: list[str] = [
             "podman",
             "create",
+            "--platform",
+            linux_container_platform(),
             "--name",
             container_name,
             "--hostname",
             container_name,
             "-p",
-            str(CONTAINER_TOOL_SERVER_PORT),
+            f"{self._tool_server_port}:{CONTAINER_TOOL_SERVER_PORT}",
             "--cap-add",
             "NET_ADMIN",
             "--cap-add",
