@@ -96,13 +96,16 @@ grep -q '^pf_load=' /boot/loader.conf 2>/dev/null || echo 'pf_load="YES"' >> /bo
 pw groupmod operator -m youruser
 
 # --- [root] podman privilege — pick ONE approach (normal user + Strix needs this):
-# A) sudo — create e.g. /usr/local/etc/sudoers.d/strix-podman with visudo:
+# A) sudo — use visudo only (never append to sudoers with echo; bad syntax can lock out sudo):
+#    visudo -f /usr/local/etc/sudoers.d/strix-podman
+#    Single line (replace youruser), full path to podman, save (file must be mode 0440):
 #    youruser ALL=(ALL) NOPASSWD: /usr/local/bin/podman
-# B) doas — in /usr/local/etc/doas.conf:
-#    permit nopass youruser cmd podman
+# B) doas — edit /usr/local/etc/doas.conf with an editor (see doas.conf(5)); e.g.:
+#    permit nopass youruser cmd /usr/local/bin/podman
+#    Use the real path from: `command -v podman` (often /usr/local/bin/podman).
 # C) Skip A/B and run Strix entirely as root when testing:
 #    sudo -E env HOME=$HOME PATH=$PATH uv run strix …
-# (If only `doas` exists and B is missing, `doas -n` will fail fast; install `sudo` or add B.)
+# (If only doas is installed and B is wrong or missing, `doas -n` fails until fixed; prefer A with sudo.)
 
 # --- [user] Clone and install (production deps only)
 cd "${HOME}"
