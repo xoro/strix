@@ -26,6 +26,8 @@ logger = logging.getLogger(__name__)
 HOST_GATEWAY_HOSTNAME = "host.containers.internal"
 PODMAN_TIMEOUT = 60
 CONTAINER_TOOL_SERVER_PORT = 48081
+# docker-entrypoint.sh: Caido (~30s) then proxy + tool server; often >60s before /health on host.
+_FREEBSD_TOOL_SERVER_BOOTSTRAP_WAIT_SEC = 90
 
 _FREEBSD_ENTRYPOINT_WRAPPER = (
     "sed 's/sudo tee/tee/g; s/sudo -E -u pentester //g; s/sudo -u pentester //g' "
@@ -198,7 +200,9 @@ class PodmanRuntime(AbstractRuntime):
         if port_bindings.get(port_key):
             binding = port_bindings[port_key]
             if isinstance(binding, list) and binding:
-                self._tool_server_port = int(binding[0].get("HostPort", 0))
+                host_port = int(binding[0].get("HostPort", 0))
+                if host_port > 0:
+                    self._tool_server_port = host_port
 
     @staticmethod
     def _start_container(container_name: str) -> None:
@@ -215,16 +219,61 @@ class PodmanRuntime(AbstractRuntime):
                 f"podman start failed: {result.stderr.strip()}",
             )
 
+    def _tool_server_published_host_port_cli(self, container_name: str) -> int | None:
+        """Parse ``podman port`` for the tool-server container port (authoritative on FreeBSD)."""
+        result = subprocess.run(  # noqa: S603
+            [*_podman_cli_argv(), "port", container_name],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+        needle = f"{CONTAINER_TOOL_SERVER_PORT}/tcp"
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if needle not in line or "->" not in line:
+                continue
+            right = line.split("->", 1)[1].strip()
+            if ":" not in right:
+                continue
+            port_str = right.rsplit(":", 1)[-1].rstrip("]")
+            try:
+                mapped = int(port_str)
+            except ValueError:
+                continue
+            if mapped > 0:
+                return mapped
+        return None
+
+    def _sync_tool_server_host_port_after_start(
+        self, container_name: str, fallback_port: int
+    ) -> None:
+        """Refresh host port from ``podman port`` / inspect (Podman may omit maps in API attrs)."""
+        if self._is_freebsd():
+            mapped = self._tool_server_published_host_port_cli(container_name)
+            if mapped is not None:
+                self._tool_server_port = mapped
+                return
+        if self._tool_server_port is None or self._tool_server_port <= 0:
+            self._tool_server_port = fallback_port
+
     def _wait_for_tool_server(self, max_retries: int = 30, timeout: int = 5) -> None:
         # FreeBSD: use the published host port on loopback. Bridge IPs from ``podman inspect`` are
         # often wrong for host-to-container HTTP with Podman on FreeBSD.
         host = self._resolve_host()
         port = CONTAINER_TOOL_SERVER_PORT if self._container_ip else self._tool_server_port
         health_url = f"http://{host}:{port}/health"
+        logger.info("Waiting for tool server at %s", health_url)
 
-        time.sleep(10 if self._is_freebsd() else 5)
+        if self._is_freebsd():
+            time.sleep(_FREEBSD_TOOL_SERVER_BOOTSTRAP_WAIT_SEC)
+        else:
+            time.sleep(5)
 
-        for attempt in range(max_retries):
+        attempts = max(max_retries, 45) if self._is_freebsd() else max_retries
+        for attempt in range(attempts):
             try:
                 with httpx.Client(trust_env=False, timeout=timeout) as client:
                     response = client.get(health_url)
@@ -289,7 +338,13 @@ class PodmanRuntime(AbstractRuntime):
                     )
                     self._start_container(container_name)
 
+                saved_host_port = self._tool_server_port
                 container_obj = self.client.containers.get(container_name)
+                container_obj.reload()
+                self._recover_container_state(container_obj)
+                if self._tool_server_port is None or self._tool_server_port <= 0:
+                    self._tool_server_port = saved_host_port
+                self._sync_tool_server_host_port_after_start(container_name, saved_host_port)
                 self._scan_container = container_obj
                 self._wait_for_tool_server()
 
