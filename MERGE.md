@@ -74,14 +74,25 @@ The merge with `--strategy-option theirs` overwrites our customizations in share
 
 Upstream uses **PEP 621** (`[project]` / `[dependency-groups]`) and **`uv.lock`**, not `[tool.poetry]`. Edit the **`dependencies`** array under **`[project]`**.
 
-#### 5a. `pyproject.toml` — Podman dependency & Docker platform marker
+#### 5a. `pyproject.toml` / `uv.lock` — FreeBSD & fork-only dependencies
 
-Ensure a single unpinned `docker` line is **not** used on every platform. In **`[project]` → `dependencies`**, use environment markers (same idea as Poetry markers):
+Upstream may add or reorder dependencies. After each merge, **re-apply** the fork’s
+**`platform_system`** markers and related entries. Do **not** use **`sys_platform == 'freebsd'`**
+for FreeBSD: on modern releases **`sys.platform`** is e.g. **`freebsd15`**, so those markers
+miss. Use **`platform_system == 'FreeBSD'`** (matches `platform.system()`).
 
-```toml
-  "docker>=7.1.0; sys_platform != 'freebsd'",
-  "podman>=5.0.0; sys_platform == 'freebsd'",
-```
+**Runtime `[project]` → `dependencies` — verify or restore:**
+
+| Concern | Fork pattern |
+|--------|----------------|
+| Docker vs Podman | `"docker>=…; platform_system != 'FreeBSD'"` and `"podman>=…; platform_system == 'FreeBSD'"` |
+| LiteLLM extras | `"litellm[proxy]>=…; platform_system != 'FreeBSD'"` and plain `"litellm>=…; platform_system == 'FreeBSD'"` (`[proxy]` pulls **pyroscope-io**, no FreeBSD wheels). |
+| Traceloop | `"traceloop-sdk>=…; platform_system != 'FreeBSD'"` if upstream adds it unguarded. |
+| scrubadub / sklearn / scipy | `"scrubadub>=…; platform_system != 'FreeBSD'"` — avoids **scikit-learn** → **SciPy** source builds on FreeBSD. |
+
+**`[tool.uv.sources]`** — keep path overrides for **`vendor/fastuuid-stub`**, **`vendor/tiktoken-stub`**, **`vendor/tokenizers-stub`** with FreeBSD markers where applicable (PyPI wheels often exclude FreeBSD; stubs avoid huge Rust builds).
+
+**`[dependency-groups]` dev** — optional: exclude **`ruff`** and **`pyinstaller`** on FreeBSD (`platform_system != 'FreeBSD'`) so `uv sync` does not compile massive native stacks on small ARM64 hosts.
 
 Add to mypy `[[tool.mypy.overrides]]` → `module` list (merge with upstream’s third-party stubs — do not drop upstream entries such as `opentelemetry.*`, `scrubadub.*`, `traceloop.*`):
 
@@ -90,7 +101,14 @@ Add to mypy `[[tool.mypy.overrides]]` → `module` list (merge with upstream’s
     "podman.*",
 ```
 
-After edits, refresh the lockfile: `uv lock` (or `uv sync`), then commit `uv.lock` if it changed.
+After edits, refresh the lockfile: **`uv lock`** (or **`uv sync`**), then commit **`uv.lock`** if it changed.
+
+**Related Python files (if upstream touches them):**
+
+- **`strix/telemetry/utils.py`** — If **`scrubadub`** is omitted on FreeBSD (see table above),
+  **`TelemetrySanitizer`** must not import scrubadub unconditionally. Keep **`_HAS_SCRUBADUB`**,
+  regex-only string cleaning without scrubadub, and full **`Scrubber`** when scrubadub is installed.
+- Update **`INSTALL.md`** when dependency or FreeBSD install policy changes.
 
 #### 5b. `strix/config/config.py` — FreeBSD runtime auto-detection
 
@@ -111,7 +129,7 @@ Replace hardcoded `strix_runtime_backend = "docker"` with:
 strix_runtime_backend = _default_runtime_backend()
 ```
 
-#### 5c. `strix/llm/__init__.py` — Copilot integration
+#### 5c. `strix/llm/__init__.py` — Copilot integration + FreeBSD tokenizer
 
 Add:
 ```python
@@ -127,6 +145,10 @@ Add at end of file:
 ```python
 configure_copilot_litellm()
 ```
+
+**FreeBSD:** If upstream refactors this module, preserve **`litellm.disable_hf_tokenizer_download = True`**
+(or equivalent) when **`platform.system() == "FreeBSD"`** so stub **`tokenizers`** (see 5a) does not
+trigger Hugging Face downloads.
 
 #### 5d. `strix/runtime/__init__.py` — Podman runtime
 
@@ -368,3 +390,4 @@ Upstream also ships `AGENTS.md`; keep any **local** edits in sync manually if yo
 | 2026-02-20 | — (post-merge fix) | Added retry with exponential backoff to `memory_compressor.py` `_summarize_messages()`. Increased default timeout from 30s to 120s. Wired up the previously unused `SUMMARIZE_MAX_RETRIES` / `SUMMARIZE_INITIAL_BACKOFF` constants. Fixes repeated `litellm.Timeout` errors during CI runs with Copilot. |
 | 2026-02-22 | v0.8.1 | Upstream added `normalize_tool_format` / `resolve_strix_model` utilities, centralized strix model resolution with separate API and capability names (`litellm_model` / `canonical_model` in `LLMConfig`), fixed tool-call tag parsing, added `<meta>Continue the task.</meta>` fallback for all models when last message is assistant. Restored all fork-specific Copilot/Podman/FreeBSD changes. Fixed merge-mangled `_summarize_messages()` (orphaned except block + wrong `role: assistant`). Updated `test_non_copilot_no_append_even_with_assistant_last` → `test_non_copilot_appends_meta_continue_when_last_is_assistant` to reflect new upstream behaviour. |
 | 2026-04 | v0.8.3+ (upstream uv) | Upstream migrated to **uv** (`uv.lock`, hatchling, `[project]` deps). Integrated fork on GitHub (`xoro/strix`); merge conflicts resolved with PEP 621 dependency strings for docker/podman, `strix_image` 0.1.13, and `_prepare_messages()` Copilot + **non-interactive** meta-continue `elif`. |
+| 2026-04 | — (docs) | **MERGE.md §5a** updated: use **`platform_system`** (not **`sys_platform`**) for FreeBSD; document **litellm** / **traceloop** / **scrubadub** / **uv.sources** stubs / dev **ruff**–**pyinstaller** exclusions; **§5c** FreeBSD tokenizer note; telemetry scrubadub fallback. |
