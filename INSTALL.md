@@ -78,7 +78,7 @@ Target: **FreeBSD 15.0+** with **`pkg`**. Run **`[root]`** steps as **`root`** (
 ```sh
 # --- [root] Base packages
 pkg update
-pkg install -y python312 rust git podman uv sudo
+pkg install -y python312 rust git podman uv doas
 
 # --- [root] Podman API at boot (Docker-compatible socket for Strix)
 sysrc podman_enable=YES
@@ -111,9 +111,7 @@ U=youruser && P="$(command -v podman)" && printf '\n# strix-agent\npermit nopass
 cd "${HOME}"
 git clone https://github.com/xoro/strix.git
 cd strix
-make install
-# same as: uv sync --no-dev
-command -v uv
+uv --verbose sync
 
 # --- [user] LLM — choose one style:
 # OpenAI-compatible API key:
@@ -134,7 +132,7 @@ uv run strix --non-interactive --target https://example.com --scan-mode quick
 
 - **Black-box** = URL / hostname / IP. **White-box** = **directory path**; Strix copies it into the sandbox (`local_code`).
 - **Socket:** default **`DOCKER_HOST=unix:///var/run/podman/podman.sock`** when unset. Without **`operator`** membership, use **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** so the API client can open the socket, or run as **root**.
-- **Podman CLI:** FreeBSD has **no rootless** mode; Strix uses **`sudo -n`** / **`doas -n`**. Command **A** validates **`sudoers`** with **`visudo -c`** before installing; **B** appends to **`doas.conf`** (confirm syntax in **`doas.conf(5)`**). Or use **C**.
+- **Podman CLI:** FreeBSD has **no rootless** mode; Strix uses **`sudo -n`** / **`doas -n`** with the **resolved** path from **`command -v podman`** (so it matches **`NOPASSWD: /usr/local/bin/podman`** and **`permit nopass … cmd /usr/local/bin/podman`** — a bare **`podman`** in the rule will not match). Command **A** validates **`sudoers`** with **`visudo -c`**; **B** appends to **`doas.conf`**. Or use **C**.
 - First run may **pull** the large sandbox image; arch is **`linux/arm64`** vs **`linux/amd64`** from **`uname -m`**. Optional manual pull: **FreeBSD — sandbox image** below.
 - Full **dev** install (`make setup-dev`): **FreeBSD — two paths**; heavy **ruff** builds can OOM on small **ARM64** hosts.
 

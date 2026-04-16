@@ -35,22 +35,29 @@ _FREEBSD_ENTRYPOINT_WRAPPER = (
 )
 
 
+def _podman_executable() -> str:
+    """Absolute path to ``podman`` when on ``PATH`` (required for ``doas``/``sudoers`` ``cmd`` rules)."""
+    return shutil.which("podman") or "podman"
+
+
 def _podman_cli_argv() -> list[str]:
     """Argv prefix for Podman CLI subprocesses.
 
     FreeBSD has no rootless Podman; ``podman create`` / ``start`` must run as root.
     As a normal user, prepend ``sudo``/``doas`` with **-n** (non-interactive): password
     prompts do not work reliably from Python's subprocess, so ``NOPASSWD`` /
-    ``permit nopass`` is required. Alternatively run ``uv run strix`` under
-    ``sudo -E`` (euid 0 → plain ``podman``). PodmanClient (HTTP API) may still be
-    used as a non-root ``operator`` member.
+    ``permit nopass`` is required. Use the **resolved** podman path so it matches
+    ``NOPASSWD: /usr/local/bin/podman`` and ``permit nopass … cmd /usr/local/bin/podman``.
+    Alternatively run ``uv run strix`` under ``sudo -E`` (euid 0). PodmanClient (HTTP API)
+    may still be used as a non-root ``operator`` member.
     """
+    podman_exe = _podman_executable()
     if sys.platform.startswith("freebsd") and os.geteuid() != 0:
         if shutil.which("sudo"):
-            return ["sudo", "-n", "podman"]
+            return ["sudo", "-n", podman_exe]
         if shutil.which("doas"):
-            return ["doas", "-n", "podman"]
-    return ["podman"]
+            return ["doas", "-n", podman_exe]
+    return [podman_exe]
 
 
 def _query_podman_info_socket() -> str | None:
