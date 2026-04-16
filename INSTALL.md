@@ -76,7 +76,7 @@ Use a fresh **FreeBSD 15.0 or later** install with **`pkg`**. Run **root-only** 
 ```sh
 # --- [root] Base packages (uv from pkg → typically /usr/local/bin/uv)
 pkg update
-pkg install -y python312 rust git podman uv
+pkg install -y python312 rust git podman uv sudo
 
 # --- [root] Podman API socket at boot (Strix needs /var/run/podman/podman.sock)
 sysrc podman_enable=YES
@@ -118,7 +118,7 @@ uv run strix --non-interactive --target 127.0.0.1 --scan-mode quick
 
 - **Black-box** targets are URLs, hostnames, or IPs tested without your source tree. **White-box** targets are **existing directory paths** (`local_code`); Strix copies that tree into the sandbox for review.
 - If you **did not** add **`youruser`** to **`operator`**, run Strix with **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** so the process can open the socket, or stay on **root** for quick tests.
-- **Podman CLI as root:** FreeBSD has **no rootless** Podman. When you run Strix as a normal user, it invokes **`sudo podman`** / **`doas podman`** for **`create`**, **`start`**, **`rm`**, etc. Install **`sudo`** (or **`doas`**) and allow your user to run **`podman`** (password prompt, or **`NOPASSWD`** in **`sudoers`** for non-interactive use).
+- **Podman CLI as root:** FreeBSD has **no rootless** Podman. When you run Strix as a normal user, it runs **`sudo -n podman`** / **`doas -n podman`** (non-interactive). Password prompts **do not work** from Strix’s subprocesses — configure **`NOPASSWD`** for **`/usr/local/bin/podman`** in **`sudoers`**, or **`permit nopass youruser cmd podman`** in **`/usr/local/etc/doas.conf`**, or run the whole CLI as root: **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** (then Strix uses plain **`podman`**).
 - First run may **pull** the sandbox image (large); Strix chooses **`linux/arm64`** vs **`linux/amd64`** from **`uname -m`**. Optional manual pre-pull: see **FreeBSD — sandbox image** below.
 - **Developer install** (`make setup-dev`) instead of **`make install`**: see **FreeBSD — two paths** below; expect **ruff** / heavy builds to be problematic on small **ARM64** hosts.
 

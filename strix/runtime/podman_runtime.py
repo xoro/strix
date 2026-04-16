@@ -39,14 +39,17 @@ def _podman_cli_argv() -> list[str]:
     """Argv prefix for Podman CLI subprocesses.
 
     FreeBSD has no rootless Podman; ``podman create`` / ``start`` must run as root.
-    As a normal user, prepend ``sudo`` or ``doas``. PodmanClient (HTTP API) may still
-    be used as a non-root ``operator`` member.
+    As a normal user, prepend ``sudo``/``doas`` with **-n** (non-interactive): password
+    prompts do not work reliably from Python's subprocess, so ``NOPASSWD`` /
+    ``permit nopass`` is required. Alternatively run ``uv run strix`` under
+    ``sudo -E`` (euid 0 → plain ``podman``). PodmanClient (HTTP API) may still be
+    used as a non-root ``operator`` member.
     """
     if sys.platform.startswith("freebsd") and os.geteuid() != 0:
         if shutil.which("sudo"):
-            return ["sudo", "podman"]
+            return ["sudo", "-n", "podman"]
         if shutil.which("doas"):
-            return ["doas", "podman"]
+            return ["doas", "-n", "podman"]
     return ["podman"]
 
 
@@ -325,7 +328,7 @@ class PodmanRuntime(AbstractRuntime):
         subprocess.run(  # noqa: S603
             _podman_cli_argv() + ["rm", "-f", container_name],  # noqa: S607
             capture_output=True,
-            timeout=15,
+            timeout=120,
             check=False,
         )
         time.sleep(0.5)
