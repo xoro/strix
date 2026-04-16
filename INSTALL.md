@@ -95,17 +95,17 @@ grep -q '^pf_load=' /boot/loader.conf 2>/dev/null || echo 'pf_load="YES"' >> /bo
 # --- [root] Optional: non-root access to the API socket (then log out/in)
 pw groupmod operator -m youruser
 
-# --- [root] podman privilege — pick ONE approach (normal user + Strix needs this):
-# A) sudo — use visudo only (never append to sudoers with echo; bad syntax can lock out sudo):
-#    visudo -f /usr/local/etc/sudoers.d/strix-podman
-#    Single line (replace youruser), full path to podman, save (file must be mode 0440):
-#    youruser ALL=(ALL) NOPASSWD: /usr/local/bin/podman
-# B) doas — edit /usr/local/etc/doas.conf with an editor (see doas.conf(5)); e.g.:
-#    permit nopass youruser cmd /usr/local/bin/podman
-#    Use the real path from: `command -v podman` (often /usr/local/bin/podman).
-# C) Skip A/B and run Strix entirely as root when testing:
+# --- [root] podman privilege — pick ONE of A / B / C (Strix runs `sudo -n` / `doas -n podman` as a normal user)
+# Set U to your login name before running A or B. Run as root.
+
+# A) sudo — write rule to a temp file, validate with visudo, then install (0440):
+install -d /usr/local/etc/sudoers.d && U=youruser && P="$(command -v podman)" && T="$(mktemp /tmp/strixsudo.XXXXXX)" && printf '%s\n' "$U ALL=(ALL) NOPASSWD: $P" >"$T" && visudo -c -f "$T" && install -o root -g wheel -m 440 "$T" /usr/local/etc/sudoers.d/strix-podman && rm -f "$T"
+
+# B) doas — append one line (back up /usr/local/etc/doas.conf first if it matters):
+U=youruser && P="$(command -v podman)" && printf '\n# strix-agent\npermit nopass %s cmd %s\n' "$U" "$P" >>/usr/local/etc/doas.conf
+
+# C) Skip A/B — run Strix as root (plain `podman`, no NOPASS needed):
 #    sudo -E env HOME=$HOME PATH=$PATH uv run strix …
-# (If only doas is installed and B is wrong or missing, `doas -n` fails until fixed; prefer A with sudo.)
 
 # --- [user] Clone and install (production deps only)
 cd "${HOME}"
@@ -134,7 +134,7 @@ uv run strix --non-interactive --target https://example.com --scan-mode quick
 
 - **Black-box** = URL / hostname / IP. **White-box** = **directory path**; Strix copies it into the sandbox (`local_code`).
 - **Socket:** default **`DOCKER_HOST=unix:///var/run/podman/podman.sock`** when unset. Without **`operator`** membership, use **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** so the API client can open the socket, or run as **root**.
-- **Podman CLI:** FreeBSD has **no rootless** mode; Strix uses **`sudo -n`** / **`doas -n`** so interactive password prompts are not relied on. Configure **A** or **B** above, or use **C**.
+- **Podman CLI:** FreeBSD has **no rootless** mode; Strix uses **`sudo -n`** / **`doas -n`**. Command **A** validates **`sudoers`** with **`visudo -c`** before installing; **B** appends to **`doas.conf`** (confirm syntax in **`doas.conf(5)`**). Or use **C**.
 - First run may **pull** the large sandbox image; arch is **`linux/arm64`** vs **`linux/amd64`** from **`uname -m`**. Optional manual pull: **FreeBSD — sandbox image** below.
 - Full **dev** install (`make setup-dev`): **FreeBSD — two paths**; heavy **ruff** builds can OOM on small **ARM64** hosts.
 
