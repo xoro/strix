@@ -15,8 +15,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 import docker
-import requests
-from docker.errors import DockerException, ImageNotFound
+from docker.errors import ImageNotFound
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -1353,34 +1352,48 @@ def check_docker_connection() -> Any:
     try:
         if sys.platform.startswith("freebsd") and not os.getenv("DOCKER_HOST"):
             os.environ["DOCKER_HOST"] = "unix:///var/run/podman/podman.sock"
-        return docker.from_env()
-    except (DockerException, OSError, requests.exceptions.RequestException):
+        client = docker.from_env()
+        client.ping()
+        return client
+    except Exception as e:
         console = Console()
+        detail = str(e).strip() or type(e).__name__
         error_text = Text()
         error_text.append("CONTAINER ENGINE UNAVAILABLE", style="bold red")
         error_text.append("\n\n", style="white")
         error_text.append("Cannot connect to the container engine.\n", style="white")
-        error_text.append(
-            "On FreeBSD, Podman is root-only: the default socket "
-            "(unix:///var/run/podman/podman.sock) is not usable as a normal user.\n",
-            style="white",
-        )
-        error_text.append(
-            "On other systems ensure Docker (or Podman with DOCKER_HOST) is running.\n\n",
-            style="white",
-        )
+        error_text.append(f"Details: {detail}\n\n", style="dim white")
+
         if sys.platform.startswith("freebsd"):
+            if os.geteuid() != 0:
+                error_text.append(
+                    "On FreeBSD, Podman is root-only: the default socket is not usable as a "
+                    "normal user. Run Strix with:\n",
+                    style="white",
+                )
+                error_text.append(
+                    "  sudo -E env HOME=$HOME PATH=$PATH uv run strix …\n",
+                    style="bold cyan",
+                )
+                error_text.append(
+                    "\n(-E keeps $HOME for GitHub Copilot tokens.)\n",
+                    style="dim white",
+                )
+            else:
+                error_text.append(
+                    "As root: ensure Podman is running and the socket exists, e.g.:\n",
+                    style="white",
+                )
+                error_text.append(
+                    "  service podman start\n"
+                    "  ls -l /var/run/podman/podman.sock\n"
+                    "  podman info\n",
+                    style="bold cyan",
+                )
+        else:
             error_text.append(
-                "Run Strix with sudo so the Docker API client can reach Podman, e.g.:\n",
+                "Ensure Docker is running, or set DOCKER_HOST to a working Podman socket.\n",
                 style="white",
-            )
-            error_text.append(
-                "  sudo -E env HOME=$HOME PATH=$PATH uv run strix …\n",
-                style="bold cyan",
-            )
-            error_text.append(
-                "\n(-E keeps your environment; needed for GitHub Copilot token under $HOME.)\n",
-                style="dim white",
             )
 
         panel = Panel(
@@ -1391,7 +1404,7 @@ def check_docker_connection() -> Any:
             padding=(1, 2),
         )
         console.print("\n", panel, "\n")
-        raise RuntimeError("Container engine not available") from None
+        raise RuntimeError("Container engine not available") from e
 
 
 def image_exists(client: Any, image_name: str) -> bool:
