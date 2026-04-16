@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 HOST_GATEWAY_HOSTNAME = "host.containers.internal"
 PODMAN_TIMEOUT = 60
 CONTAINER_TOOL_SERVER_PORT = 48081
-# docker-entrypoint.sh: Caido (~30s) then proxy + tool server; often >60s before /health on host.
-_FREEBSD_TOOL_SERVER_BOOTSTRAP_WAIT_SEC = 90
+# docker-entrypoint.sh: Caido (~30s) then proxy + tool server; slow ARM hosts may need >90s.
+_FREEBSD_TOOL_SERVER_BOOTSTRAP_WAIT_SEC = 120
 
 _FREEBSD_ENTRYPOINT_WRAPPER = (
     "sed 's/sudo tee/tee/g; s/sudo -E -u pentester //g; s/sudo -u pentester //g' "
@@ -259,13 +259,49 @@ class PodmanRuntime(AbstractRuntime):
         if self._tool_server_port is None or self._tool_server_port <= 0:
             self._tool_server_port = fallback_port
 
-    def _wait_for_tool_server(self, max_retries: int = 30, timeout: int = 5) -> None:
+    def _podman_logs_tail(self, container_name: str, lines: int) -> str:
+        """Best-effort ``podman logs`` for diagnosing tool-server wait failures on FreeBSD."""
+        result = subprocess.run(  # noqa: S603
+            [*_podman_cli_argv(), "logs", "--tail", str(lines), container_name],
+            capture_output=True,
+            text=True,
+            timeout=25,
+            check=False,
+        )
+        return f"{result.stdout}{result.stderr}".strip()
+
+    def _wait_for_tool_server(
+        self,
+        max_retries: int = 30,
+        timeout: int = 5,
+        *,
+        container_name: str | None = None,
+    ) -> None:
         # FreeBSD: use the published host port on loopback. Bridge IPs from ``podman inspect`` are
         # often wrong for host-to-container HTTP with Podman on FreeBSD.
-        host = self._resolve_host()
-        port = CONTAINER_TOOL_SERVER_PORT if self._container_ip else self._tool_server_port
-        health_url = f"http://{host}:{port}/health"
-        logger.info("Waiting for tool server at %s", health_url)
+        port = self._tool_server_port
+        if self._container_ip:
+            port = CONTAINER_TOOL_SERVER_PORT
+        if port is None or int(port) <= 0:
+            raise SandboxInitializationError(
+                "Tool server failed to start",
+                "Tool server host port is not set.",
+            )
+        port_i = int(port)
+
+        if self._is_freebsd():
+            health_urls = (
+                f"http://127.0.0.1:{port_i}/health",
+                f"http://localhost:{port_i}/health",
+                f"http://[::1]:{port_i}/health",
+            )
+            req_timeout: httpx.Timeout | float = httpx.Timeout(8.0, connect=2.0)
+        else:
+            host = self._resolve_host()
+            health_urls = (f"http://{host}:{port_i}/health",)
+            req_timeout = timeout
+
+        logger.info("Waiting for tool server (first URL %s)", health_urls[0])
 
         if self._is_freebsd():
             time.sleep(_FREEBSD_TOOL_SERVER_BOOTSTRAP_WAIT_SEC)
@@ -274,21 +310,30 @@ class PodmanRuntime(AbstractRuntime):
 
         attempts = max(max_retries, 45) if self._is_freebsd() else max_retries
         for attempt in range(attempts):
-            try:
-                with httpx.Client(trust_env=False, timeout=timeout) as client:
-                    response = client.get(health_url)
-                    if response.status_code == 200:
-                        data = response.json()
-                        if data.get("status") == "healthy":
-                            return
-            except (httpx.ConnectError, httpx.TimeoutException, httpx.RequestError):
-                pass
+            for health_url in health_urls:
+                try:
+                    with httpx.Client(trust_env=False, timeout=req_timeout) as client:
+                        response = client.get(health_url)
+                        if response.status_code == 200:
+                            data = response.json()
+                            if data.get("status") == "healthy":
+                                return
+                except (httpx.ConnectError, httpx.TimeoutException, httpx.RequestError):
+                    pass
 
             time.sleep(min(2**attempt * 0.5, 5))
 
+        detail = "Container initialization timed out. Please try again."
+        if container_name and self._is_freebsd():
+            logs = self._podman_logs_tail(container_name, 80)
+            if logs:
+                detail = (
+                    f"{detail}\n\n--- podman logs --tail 80 ({container_name}) ---\n{logs}"
+                )
+
         raise SandboxInitializationError(
             "Tool server failed to start",
-            "Container initialization timed out. Please try again.",
+            detail,
         )
 
     def _create_container(self, scan_id: str, max_retries: int = 2) -> object:
@@ -346,7 +391,7 @@ class PodmanRuntime(AbstractRuntime):
                     self._tool_server_port = saved_host_port
                 self._sync_tool_server_host_port_after_start(container_name, saved_host_port)
                 self._scan_container = container_obj
-                self._wait_for_tool_server()
+                self._wait_for_tool_server(container_name=container_name)
 
             except (RequestsConnectionError, RequestsTimeout) as e:
                 last_error = e
