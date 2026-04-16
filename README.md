@@ -177,7 +177,7 @@ strix --target api.your-app.com --instruction "Focus on business logic flaws and
 strix --target api.your-app.com --instruction-file ./instruction.md
 
 # Force PR diff-scope against a specific base branch
-strix -n --target ./ --scan-mode quick --scope-mode diff --diff-base origin/main
+strix --non-interactive --target ./ --scan-mode quick --scope-mode diff --diff-base origin/main
 ```
 
 ### Headless Mode
@@ -185,7 +185,7 @@ strix -n --target ./ --scan-mode quick --scope-mode diff --diff-base origin/main
 Run Strix programmatically without interactive UI using the `-n/--non-interactive` flag—perfect for servers and automated jobs. The CLI prints real-time vulnerability findings, and the final report before exiting. Exits with non-zero code when vulnerabilities are found.
 
 ```bash
-strix -n --target https://your-app.com
+strix --non-interactive --target https://your-app.com
 ```
 
 ### CI/CD (GitHub Actions)
@@ -214,7 +214,7 @@ jobs:
           STRIX_LLM: ${{ secrets.STRIX_LLM }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
 
-        run: strix -n -t ./ --scan-mode quick
+        run: strix --non-interactive --target ./ --scan-mode quick
 ```
 
 > [!TIP]

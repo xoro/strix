@@ -109,9 +109,9 @@ export LLM_API_KEY="your-api-key"
 
 # --- [user] Smoke tests (authorized targets only)
 # Black-box: URL, domain, or IP (no local source tree shipped into the sandbox)
-uv run strix -n --target https://example.com --scan-mode quick
+uv run strix --non-interactive --target https://example.com --scan-mode quick
 # White-box: existing local directory (source code on disk; path must be readable)
-# uv run strix -n --target /path/to/your/project --scan-mode quick
+# uv run strix --non-interactive --target /path/to/your/project --scan-mode quick
 ```
 
 **Notes:**
@@ -212,9 +212,9 @@ Run a minimal non-interactive check (requires LLM + runtime):
 
 ```bash
 # Black-box (e.g. web app URL)
-uv run strix -n --target https://example.com --scan-mode quick
+uv run strix --non-interactive --target https://example.com --scan-mode quick
 # White-box (local source tree)
-# uv run strix -n --target /path/to/project --scan-mode quick
+# uv run strix --non-interactive --target /path/to/project --scan-mode quick
 ```
 
 ---

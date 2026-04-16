@@ -28,7 +28,7 @@ jobs:
         env:
           STRIX_LLM: ${{ secrets.STRIX_LLM }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-        run: strix -n -t ./ --scan-mode quick
+        run: strix --non-interactive --target ./ --scan-mode quick
 ```
 
 ## Required Secrets
