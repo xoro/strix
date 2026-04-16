@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 import docker
+import requests
 from docker.errors import DockerException, ImageNotFound
 from rich.console import Console
 from rich.panel import Panel
@@ -1353,17 +1354,34 @@ def check_docker_connection() -> Any:
         if sys.platform.startswith("freebsd") and not os.getenv("DOCKER_HOST"):
             os.environ["DOCKER_HOST"] = "unix:///var/run/podman/podman.sock"
         return docker.from_env()
-    except DockerException:
+    except (DockerException, OSError, requests.exceptions.RequestException):
         console = Console()
         error_text = Text()
-        error_text.append("DOCKER NOT AVAILABLE", style="bold red")
+        error_text.append("CONTAINER ENGINE UNAVAILABLE", style="bold red")
         error_text.append("\n\n", style="white")
         error_text.append("Cannot connect to the container engine.\n", style="white")
         error_text.append(
-            "On FreeBSD use Podman as root or set DOCKER_HOST to your Podman socket "
-            "(default unix:///var/run/podman/podman.sock). On other systems ensure Docker is running.\n",
+            "On FreeBSD, Podman is root-only: the default socket "
+            "(unix:///var/run/podman/podman.sock) is not usable as a normal user.\n",
             style="white",
         )
+        error_text.append(
+            "On other systems ensure Docker (or Podman with DOCKER_HOST) is running.\n\n",
+            style="white",
+        )
+        if sys.platform.startswith("freebsd"):
+            error_text.append(
+                "Run Strix with sudo so the Docker API client can reach Podman, e.g.:\n",
+                style="white",
+            )
+            error_text.append(
+                "  sudo -E env HOME=$HOME PATH=$PATH uv run strix …\n",
+                style="bold cyan",
+            )
+            error_text.append(
+                "\n(-E keeps your environment; needed for GitHub Copilot token under $HOME.)\n",
+                style="dim white",
+            )
 
         panel = Panel(
             error_text,
@@ -1373,7 +1391,7 @@ def check_docker_connection() -> Any:
             padding=(1, 2),
         )
         console.print("\n", panel, "\n")
-        raise RuntimeError("Docker not available") from None
+        raise RuntimeError("Container engine not available") from None
 
 
 def image_exists(client: Any, image_name: str) -> bool:
