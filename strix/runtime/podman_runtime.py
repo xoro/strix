@@ -1,6 +1,7 @@
 import logging
 import os
 import secrets
+import shutil
 import socket
 import subprocess
 import sys
@@ -34,10 +35,25 @@ _FREEBSD_ENTRYPOINT_WRAPPER = (
 )
 
 
+def _podman_cli_argv() -> list[str]:
+    """Argv prefix for Podman CLI subprocesses.
+
+    FreeBSD has no rootless Podman; ``podman create`` / ``start`` must run as root.
+    As a normal user, prepend ``sudo`` or ``doas``. PodmanClient (HTTP API) may still
+    be used as a non-root ``operator`` member.
+    """
+    if sys.platform.startswith("freebsd") and os.geteuid() != 0:
+        if shutil.which("sudo"):
+            return ["sudo", "podman"]
+        if shutil.which("doas"):
+            return ["doas", "podman"]
+    return ["podman"]
+
+
 def _query_podman_info_socket() -> str | None:
     try:
         result = subprocess.run(  # noqa: S603
-            ["podman", "info", "--format", "{{.Host.RemoteSocket.Path}}"],  # noqa: S607
+            _podman_cli_argv() + ["info", "--format", "{{.Host.RemoteSocket.Path}}"],  # noqa: S607
             capture_output=True,
             text=True,
             timeout=10,
@@ -176,7 +192,7 @@ class PodmanRuntime(AbstractRuntime):
     @staticmethod
     def _start_container(container_name: str) -> None:
         result = subprocess.run(  # noqa: S603
-            ["podman", "start", container_name],  # noqa: S607
+            _podman_cli_argv() + ["start", container_name],  # noqa: S607
             capture_output=True,
             text=True,
             timeout=30,
@@ -191,8 +207,8 @@ class PodmanRuntime(AbstractRuntime):
     @staticmethod
     def _get_container_ip(container_name: str) -> str | None:
         result = subprocess.run(  # noqa: S603
-            [  # noqa: S607
-                "podman",
+            _podman_cli_argv()  # noqa: S607
+            + [
                 "inspect",
                 container_name,
                 "--format",
@@ -307,7 +323,7 @@ class PodmanRuntime(AbstractRuntime):
 
     def _remove_existing_container(self, container_name: str) -> None:
         subprocess.run(  # noqa: S603
-            ["podman", "rm", "-f", container_name],  # noqa: S607
+            _podman_cli_argv() + ["rm", "-f", container_name],  # noqa: S607
             capture_output=True,
             timeout=15,
             check=False,
@@ -329,8 +345,7 @@ class PodmanRuntime(AbstractRuntime):
         # Map the host port we already chose to the tool server port in the container (same as
         # DockerRuntime ports={f"{CONTAINER_TOOL_SERVER_PORT}/tcp": host_port}). A lone "-p 48081"
         # does not bind to self._tool_server_port and breaks publish + health checks on FreeBSD.
-        cmd: list[str] = [
-            "podman",
+        cmd: list[str] = _podman_cli_argv() + [
             "create",
             "--platform",
             linux_container_platform(),
@@ -470,18 +485,18 @@ class PodmanRuntime(AbstractRuntime):
         try:
             dest_dir = f"/workspace/{target_name}" if target_name else "/workspace"
             subprocess.run(  # noqa: S603
-                ["podman", "exec", container_name, "mkdir", "-p", dest_dir],  # noqa: S607
+                _podman_cli_argv() + ["exec", container_name, "mkdir", "-p", dest_dir],  # noqa: S607
                 check=True,
                 capture_output=True,
             )
             subprocess.run(  # noqa: S603
-                ["podman", "cp", f"{local_path}/.", f"{container_name}:{dest_dir}/"],  # noqa: S607
+                _podman_cli_argv() + ["cp", f"{local_path}/.", f"{container_name}:{dest_dir}/"],  # noqa: S607
                 check=True,
                 capture_output=True,
             )
             subprocess.run(  # noqa: S603
-                [  # noqa: S607
-                    "podman",
+                _podman_cli_argv()  # noqa: S607
+                + [
                     "exec",
                     container_name,
                     "chmod",
@@ -598,7 +613,7 @@ class PodmanRuntime(AbstractRuntime):
                 return
 
             subprocess.Popen(  # noqa: S603
-                ["podman", "rm", "-f", container_name],  # noqa: S607
+                _podman_cli_argv() + ["rm", "-f", container_name],  # noqa: S607
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 start_new_session=True,
