@@ -93,28 +93,30 @@ grep -q '^pf_load=' /boot/loader.conf 2>/dev/null || echo 'pf_load="YES"' >> /bo
 # --- [root] Optional: let a normal user open the socket without sudo (then log out/in)
 # pw groupmod operator -m youruser
 
-# --- [user] Confirm uv (already installed via pkg; ensure /usr/local/bin is on PATH)
-command -v uv
-
 # --- [user] Clone and install Strix (production deps only; recommended on FreeBSD)
+cd ${HOME}
 git clone https://github.com/xoro/strix.git
 cd strix
-make install
+uv --verbose sync
 
 # --- [user] LLM — pick one:
 # API key provider:
 export STRIX_LLM="openai/gpt-5.4"
 export LLM_API_KEY="your-api-key"
 # OR GitHub Copilot (no LLM_API_KEY):
-# export STRIX_LLM="github_copilot/gpt-4o"
+# export STRIX_LLM="github_copilot/claude-sonnet-4.6"
 # uv run strix --auth-github-copilot
 
-# --- [user] Smoke test (authorized target only)
+# --- [user] Smoke tests (authorized targets only)
+# Black-box: URL, domain, or IP (no local source tree shipped into the sandbox)
 uv run strix -n --target https://example.com --scan-mode quick
+# White-box: existing local directory (source code on disk; path must be readable)
+# uv run strix -n --target /path/to/your/project --scan-mode quick
 ```
 
 **Notes:**
 
+- **Black-box** targets are URLs, hostnames, or IPs tested without your source tree. **White-box** targets are **existing directory paths** (`local_code`); Strix copies that tree into the sandbox for review.
 - If you **did not** add **`youruser`** to **`operator`**, run Strix with **`sudo -E env HOME=$HOME PATH=$PATH uv run strix …`** so the process can open the socket, or stay on **root** for quick tests.
 - First run may **pull** the sandbox image (large); Strix chooses **`linux/arm64`** vs **`linux/amd64`** from **`uname -m`**. Optional manual pre-pull: see **FreeBSD — sandbox image** below.
 - **Developer install** (`make setup-dev`) instead of **`make install`**: see **FreeBSD — two paths** below; expect **ruff** / heavy builds to be problematic on small **ARM64** hosts.
@@ -209,7 +211,10 @@ uv run strix --help
 Run a minimal non-interactive check (requires LLM + runtime):
 
 ```bash
+# Black-box (e.g. web app URL)
 uv run strix -n --target https://example.com --scan-mode quick
+# White-box (local source tree)
+# uv run strix -n --target /path/to/project --scan-mode quick
 ```
 
 ---
