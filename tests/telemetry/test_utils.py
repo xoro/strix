@@ -1,4 +1,4 @@
-from strix.telemetry.utils import prune_otel_span_attributes
+from strix.telemetry.utils import TelemetrySanitizer, prune_otel_span_attributes
 
 
 def test_prune_otel_span_attributes_drops_high_volume_prompt_content() -> None:
@@ -25,6 +25,13 @@ def test_prune_otel_span_attributes_drops_high_volume_prompt_content() -> None:
     assert pruned["gen_ai.operation.name"] == "openai.chat"
     assert pruned["gen_ai.prompt.0.role"] == "system"
     assert pruned["strix.filtered_attributes_count"] == 6
+
+
+def test_telemetry_sanitizer_redacts_openai_style_key_in_string() -> None:
+    sanitizer = TelemetrySanitizer()
+    out = sanitizer.sanitize("token sk-test12345678901234567890 suffix")
+    assert "sk-test" not in out
+    assert "[REDACTED]" in out
 
 
 def test_prune_otel_span_attributes_keeps_metadata_when_nothing_is_dropped() -> None:

@@ -90,7 +90,7 @@ Install the following **before** cloning the repository. Every OS needs **Python
    # equivalent: uv sync && uv run pre-commit install
    ```
 
-   **`ruff`** and **PyInstaller** are omitted on FreeBSD in `pyproject.toml`: there are no **ruff** wheels on PyPI for FreeBSD, and building it from source is a large **Rust/maturin** compile that often hits **OOM (SIGKILL)** on small **ARM64** VPS hosts. **`make format`** and **`make lint`** use `uv run ruff`; on FreeBSD they will fail unless you install **ruff** some other way or run those targets on **Linux/macOS/Windows** or **CI**. **PyInstaller** has no reliable FreeBSD story; use **GitHub Actions** / another OS to produce release binaries (`scripts/build.sh`).
+   **`ruff`**, **`scrubadub`**, and **PyInstaller** are omitted on FreeBSD in `pyproject.toml`: there are no **ruff** wheels on PyPI for FreeBSD, and building it from source is a large **Rust/maturin** compile that often hits **OOM (SIGKILL)** on small **ARM64** VPS hosts. **`scrubadub`** pulls **scikit-learn** → **SciPy**, which has no FreeBSD wheels; building **SciPy** needs **Fortran** (`gfortran`), **`pkgconf`**, and a lot of RAM. Telemetry redaction on FreeBSD uses a **regex-only** fallback (no **scrubadub**). **`make format`** and **`make lint`** use `uv run ruff`; on FreeBSD they will fail unless you install **ruff** some other way or run those targets on **Linux/macOS/Windows** or **CI**. **PyInstaller** has no reliable FreeBSD story; use **GitHub Actions** / another OS to produce release binaries (`scripts/build.sh`).
 
 **Other platforms** — typical flow:
 
@@ -162,6 +162,7 @@ uv run strix -n --target https://example.com --scan-mode quick
 | FreeBSD: `pkg: No packages available … gmak` | The package is **`gmake`**: `sudo pkg install -y gmake`. |
 | FreeBSD: **PyInstaller** / bootloader / `ieeefp.h` / `__BEGIN_DECLS` during `uv sync` | Current trees skip PyInstaller on FreeBSD. **`git pull`** and run **`uv sync`** again. Release binaries are built on CI / non-FreeBSD hosts. |
 | FreeBSD: **pre-commit** / **ruff** hooks fail | The **ruff-pre-commit** hooks expect a supported platform binary. Skip them for one commit: `SKIP=ruff-lint,ruff-format git commit …`, or rely on **CI** for lint/format. |
+| FreeBSD: **`scipy`** / **`scikit-learn`** / **Unknown compiler `gfortran`** / **`pkg-config`** during `uv sync` | **`scrubadub`** pulls **sklearn** → **SciPy**, which often builds from source on FreeBSD. This tree **omits scrubadub on FreeBSD** (regex redaction in telemetry instead). **`git pull`** and **`uv sync`** again. To build SciPy yourself you would need **`pkg install pkgconf`** and a GCC with **`gfortran`** (e.g. **`gcc14`**) plus enough RAM/swap. |
 
 ---
 

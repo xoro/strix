@@ -1,5 +1,6 @@
 import json
 import logging
+import platform
 import re
 import threading
 from collections.abc import Callable, Sequence
@@ -15,9 +16,13 @@ from opentelemetry.sdk.trace.export import (
     SpanExporter,
     SpanExportResult,
 )
-from scrubadub import Scrubber
-from scrubadub.detectors import RegexDetector
-from scrubadub.filth import Filth
+
+
+_HAS_SCRUBADUB = platform.system() != "FreeBSD"
+if _HAS_SCRUBADUB:
+    from scrubadub import Scrubber
+    from scrubadub.detectors import RegexDetector
+    from scrubadub.filth import Filth
 
 
 logger = logging.getLogger(__name__)
@@ -54,19 +59,29 @@ _NOISY_OTEL_EXACT_KEYS = {
 }
 
 
-class _SecretFilth(Filth):  # type: ignore[misc]
-    type = "secret"
+if _HAS_SCRUBADUB:
 
+    class _SecretFilth(Filth):  # type: ignore[misc]
+        type = "secret"
 
-class _SecretTokenDetector(RegexDetector):  # type: ignore[misc]
-    name = "strix_secret_token_detector"
-    filth_cls = _SecretFilth
-    regex = _SENSITIVE_TOKEN_PATTERN
+    class _SecretTokenDetector(RegexDetector):  # type: ignore[misc]
+        name = "strix_secret_token_detector"
+        filth_cls = _SecretFilth
+        regex = _SENSITIVE_TOKEN_PATTERN
 
 
 class TelemetrySanitizer:
     def __init__(self) -> None:
-        self._scrubber = Scrubber(detector_list=[_SecretTokenDetector])
+        if _HAS_SCRUBADUB:
+            self._scrubber = Scrubber(detector_list=[_SecretTokenDetector])
+        else:
+            self._scrubber = None
+
+    def _clean_string(self, data: str) -> str:
+        if self._scrubber is not None:
+            cleaned = self._scrubber.clean(data)
+            return _SCRUBADUB_PLACEHOLDER_PATTERN.sub(_REDACTED, cleaned)
+        return _SENSITIVE_TOKEN_PATTERN.sub(_REDACTED, data)
 
     def sanitize(self, data: Any, key_hint: str | None = None) -> Any:  # noqa: PLR0911
         if data is None:
@@ -94,8 +109,7 @@ class TelemetrySanitizer:
             if key_hint and _SENSITIVE_KEY_PATTERN.search(key_hint):
                 return _REDACTED
 
-            cleaned = self._scrubber.clean(data)
-            return _SCRUBADUB_PLACEHOLDER_PATTERN.sub(_REDACTED, cleaned)
+            return self._clean_string(data)
 
         if isinstance(data, int | float | bool):
             return data
