@@ -3,7 +3,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 
 STRIX_API_BASE = "https://models.strix.ai/api/v1"
@@ -62,6 +62,10 @@ class Config:
 
     # Config file override (set via --config CLI arg)
     _config_file_override: Path | None = None
+
+    # Tracks env vars set by the initial default-config load so they can be
+    # cleared when a --config override is later applied (avoids leakage).
+    _applied_from_default: ClassVar[dict[str, str]] = {}
 
     @classmethod
     def _tracked_names(cls) -> list[str]:
@@ -157,6 +161,11 @@ class Config:
             if var_name in cls.tracked_vars() and (force or var_name not in os.environ):
                 os.environ[var_name] = var_value
                 applied[var_name] = var_value
+
+        # Record what was applied from the default config so it can be cleared
+        # if a --config override is later provided (prevents leakage).
+        if cls._config_file_override is None and not force:
+            cls._applied_from_default = applied
 
         return applied
 
