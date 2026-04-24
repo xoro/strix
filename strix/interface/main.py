@@ -92,8 +92,9 @@ def _validate_github_copilot_token() -> bool:
     try:
         import httpx
 
+        user_api_url = os.getenv("GITHUB_COPILOT_USER_API_URL", "https://api.github.com/user")
         resp = httpx.get(
-            "https://api.github.com/user",
+            user_api_url,
             headers={
                 "Authorization": f"token {token}",
                 "Accept": "application/json",
@@ -133,9 +134,77 @@ def authenticate_github_copilot() -> None:  # noqa: PLR0915
         console.print()
 
     try:
-        from litellm.llms.github_copilot.authenticator import Authenticator
+        import time as _time
 
-        auth = Authenticator()
+        from litellm.llms.github_copilot.authenticator import Authenticator
+        from litellm.llms.github_copilot.common_utils import GetAccessTokenError
+
+        class _GHESAuthenticator(Authenticator):
+            """Authenticator subclass that respects expires_in/interval from the
+            device code response instead of the upstream 60-second hard cap."""
+
+            def _poll_for_access_token(
+                self,
+                device_code: str,
+                interval: int = 5,
+                expires_in: int = 900,
+            ) -> str:
+                import httpx
+                from litellm.llms.custom_httpx.http_handler import _get_httpx_client
+
+                sync_client = _get_httpx_client()
+                max_attempts = max(1, expires_in // max(1, interval))
+                access_token_url = os.getenv(
+                    "GITHUB_COPILOT_ACCESS_TOKEN_URL",
+                    "https://github.com/login/oauth/access_token",
+                )
+                client_id = os.getenv(
+                    "GITHUB_COPILOT_CLIENT_ID", "Iv1.b507a08c87ecfe98"
+                )
+                for attempt in range(max_attempts):
+                    try:
+                        resp = sync_client.post(
+                            access_token_url,
+                            headers=self._get_github_headers(),
+                            json={
+                                "client_id": client_id,
+                                "device_code": device_code,
+                                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                            },
+                        )
+                        resp.raise_for_status()
+                        resp_json = resp.json()
+                        if "access_token" in resp_json:
+                            return resp_json["access_token"]
+                        elif resp_json.get("error") != "authorization_pending":
+                            pass  # unexpected response, keep polling
+                    except httpx.HTTPStatusError as exc:
+                        raise GetAccessTokenError(
+                            message=f"Failed to get access token: {exc}",
+                            status_code=400,
+                        ) from exc
+                    _time.sleep(interval)
+                raise GetAccessTokenError(
+                    message="Timed out waiting for user to authorize the device",
+                    status_code=400,
+                )
+
+            def _login(self) -> str:
+                device_code_info = self._get_device_code()
+                device_code = device_code_info["device_code"]
+                user_code = device_code_info["user_code"]
+                verification_uri = device_code_info["verification_uri"]
+                interval = int(device_code_info.get("interval", 5))
+                expires_in = int(device_code_info.get("expires_in", 900))
+                print(  # noqa: T201
+                    f"Please visit {verification_uri} and enter code {user_code} to authenticate.",
+                    flush=True,
+                )
+                return self._poll_for_access_token(
+                    device_code, interval=interval, expires_in=expires_in
+                )
+
+        auth = _GHESAuthenticator()
         auth.get_access_token()
     except Exception as e:  # noqa: BLE001
         error_text = Text()

@@ -36,8 +36,8 @@ dependencies = [
   # Use platform_system: sys.platform is e.g. freebsd15, not "freebsd", so sys_platform
   # markers miss modern FreeBSD. platform.system() is "FreeBSD" on all versions.
   # litellm[proxy] pulls pyroscope-io (no FreeBSD wheels). CLI uses the client API only.
-  "litellm[proxy]>=1.81.1,<1.82.0; platform_system != 'FreeBSD'",
-  "litellm>=1.81.1,<1.82.0; platform_system == 'FreeBSD'",
+  "litellm[proxy]>=1.83.0; platform_system != 'FreeBSD'",
+  "litellm>=1.83.0; platform_system == 'FreeBSD'",
   "tenacity>=9.0.0",
   "pydantic[email]>=2.11.3",
   "rich",

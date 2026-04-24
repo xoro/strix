@@ -186,6 +186,24 @@ uv run strix --auth-github-copilot
 uv run strix --target https://example.com
 ```
 
+**GitHub Copilot on GitHub Enterprise Server (GHES):**
+
+By default the device-flow auth and token validation hit `github.com`. To use a GHES instance, set the four URL env vars below before authenticating — the defaults fall back to `github.com` when they are unset.
+
+```bash
+# Replace example.ghe.com with your GHES hostname.
+export GITHUB_COPILOT_DEVICE_CODE_URL="https://example.ghe.com/login/device/code"
+export GITHUB_COPILOT_ACCESS_TOKEN_URL="https://example.ghe.com/login/oauth/access_token"
+export GITHUB_COPILOT_API_KEY_URL="https://example.ghe.com/api/v3/copilot_internal/v2/token"
+export GITHUB_COPILOT_USER_API_URL="https://example.ghe.com/api/v3/user"
+export STRIX_LLM="github_copilot/gpt-4o"
+
+uv run strix --auth-github-copilot
+uv run strix --target https://example.com
+```
+
+Add all five exports to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.) so they persist across sessions.
+
 ### FreeBSD — sandbox image
 
 After prerequisites above, pull the sandbox image once (tag matches `STRIX_IMAGE` / `strix/config/config.py`).
@@ -241,6 +259,7 @@ uv run strix --non-interactive --target https://example.com --scan-mode quick
 | Docker/Podman not running | Start **Docker Desktop** or **`systemctl start docker`** / Podman service; run `docker info` or `podman info`. |
 | Sandbox image pull fails | `docker pull ghcr.io/usestrix/strix-sandbox:0.1.13` (or your `STRIX_IMAGE`). Check network and registry access. |
 | `LLM_API_KEY` errors | Export the key for your provider; for Copilot models use `uv run strix --auth-github-copilot` instead of an API key. |
+| GitHub Copilot auth loops / device code shown repeatedly | The device-code expires (usually 15 minutes). Authorize the device in the browser before the countdown ends. If the token validation step rejects a fresh token, check that `GITHUB_COPILOT_USER_API_URL` matches your GHES host (see **GitHub Enterprise Server** section above). |
 | `uv` not found | Install [uv](https://docs.astral.sh/uv/) and ensure it is on your `PATH`, or invoke it with an absolute path. |
 | FreeBSD: Docker expected | Use Podman and this fork’s defaults, or set `STRIX_RUNTIME_BACKEND=podman`. |
 | FreeBSD: `pydantic-core`, `maturin`, “Unsupported platform”, or “Rust not found” during `uv sync` | Install a **system Rust** toolchain so source builds can compile (see **Rust** row under FreeBSD prerequisites). Ensure `rustc` is on `PATH` in the same shell, then run `uv sync` again. |
