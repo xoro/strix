@@ -10,12 +10,12 @@
 
 ## Essential Commands
 
-All commands are defined in the `Makefile`. Use Poetry for dependency management.
+All commands are defined in the `Makefile`. Use uv for dependency management.
 
 ```bash
 # Setup
 make setup-dev              # Install dev deps + pre-commit hooks
-poetry install --with=dev   # Manual equivalent
+uv sync --dev               # Manual equivalent
 
 # Development cycle
 make dev                    # format + lint + type-check + test (quick dev loop)
@@ -36,9 +36,9 @@ make clean                  # Remove __pycache__, .pytest_cache, .mypy_cache, et
 make pre-commit             # Run all pre-commit hooks
 
 # Run the application
-poetry run strix --target https://example.com
-poetry run strix --target ./my-project --non-interactive
-poetry run strix --target example.com --instruction "Focus on auth vulns"
+uv run strix --target https://example.com
+uv run strix --target ./my-project --non-interactive
+uv run strix --target example.com --instruction "Focus on auth vulns"
 
 # Build binary
 bash scripts/build.sh       # PyInstaller build
