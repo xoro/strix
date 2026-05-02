@@ -40,6 +40,26 @@ def configure_copilot_litellm() -> None:
 
     litellm.disable_copilot_system_to_assistant = True
 
+    # Patch model cost map with github_copilot/ entries that litellm does not
+    # yet ship but are available on the GHES Copilot API endpoint.  Each entry
+    # is cloned from the nearest equivalent already present in the map.
+    _COPILOT_MODEL_FALLBACKS: dict[str, str] = {
+        "github_copilot/claude-opus-4.6": "github_copilot/claude-opus-4.5",
+        "github_copilot/claude-opus-4.7": "github_copilot/claude-opus-4.5",
+        "github_copilot/claude-sonnet-4.6": "github_copilot/claude-sonnet-4.5",
+        "github_copilot/gemini-3-flash-preview": "github_copilot/gemini-2.5-pro",
+        "github_copilot/gemini-3.1-pro-preview": "github_copilot/gemini-2.5-pro",
+        "github_copilot/gpt-4-0125-preview": "github_copilot/gpt-4o",
+        "github_copilot/gpt-5.2-codex": "github_copilot/gpt-5.2",
+        "github_copilot/gpt-5.4": "github_copilot/gpt-5.3-codex",
+        "github_copilot/gpt-5.4-mini": "github_copilot/gpt-5-mini",
+        "github_copilot/gpt-5.5": "github_copilot/gpt-5.3-codex",
+        "github_copilot/grok-code-fast-1": "github_copilot/gpt-4o",
+    }
+    for model, fallback in _COPILOT_MODEL_FALLBACKS.items():
+        if model not in litellm.model_cost and fallback in litellm.model_cost:
+            litellm.model_cost[model] = litellm.model_cost[fallback].copy()
+
 
 def get_copilot_extra_headers() -> dict[str, str]:
     """Return the headers the Copilot chat API requires beyond Authorization."""
