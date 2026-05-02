@@ -328,6 +328,14 @@ Also check for behavioral changes:
   **and** the session is non-interactive. If upstream changes that condition, update this test
   and the `if/elif` structure in `_prepare_messages()` together.
 
+- **`_GHESAuthenticator` mock pattern** in `tests/interface/test_github_copilot_auth.py`:
+  `authenticate_github_copilot()` defines a local `_GHESAuthenticator` subclass of `Authenticator`
+  inside the function body and instantiates it directly — it does **not** call `Authenticator()`.
+  This means `mock_auth_cls.return_value` (i.e. `mock_auth`) is **never** the object the function
+  uses. Any `mock_auth.get_access_token.assert_called_once()` or similar assertions will
+  always fail. Tests that need to trigger the failure path should provide a real base class
+  whose method raises (not a Mock with `side_effect`), so `_GHESAuthenticator` inherits it.
+
 ### 7. Verify fragile merge points
 
 Before running the full test suite, do a quick syntax check on the two most fragile files:
@@ -392,3 +400,4 @@ Upstream also ships `AGENTS.md`; keep any **local** edits in sync manually if yo
 | 2026-04 | v0.8.3+ (upstream uv) | Upstream migrated to **uv** (`uv.lock`, hatchling, `[project]` deps). Integrated fork on GitHub (`xoro/strix`); merge conflicts resolved with PEP 621 dependency strings for docker/podman, `strix_image` 0.1.13, and `_prepare_messages()` Copilot + **non-interactive** meta-continue `elif`. |
 | 2026-04 | — (docs) | **MERGE.md §5a** updated: use **`platform_system`** (not **`sys_platform`**) for FreeBSD; document **litellm** / **traceloop** / **scrubadub** / **uv.sources** stubs / dev **ruff**–**pyinstaller** exclusions; **§5c** FreeBSD tokenizer note; telemetry scrubadub fallback. |
 | 2026-04-24 | v0.8.3 (9fb1012) | Upstream: Kubernetes security skill, NoSQL injection guide, `--config` full override fix, `asyncio.wait_for` wrap for indefinite hang prevention. Fork: added GHES support for GitHub Copilot auth (`_GHESAuthenticator`, `GITHUB_COPILOT_*` env vars, `GITHUB_COPILOT_USER_API_URL`), bumped litellm to `>=1.83.0` (vanilla PyPI, no local fork). All fork features survived merge cleanly. |
+| 2026-05-02 | — (test fixes) | Fixed three stale mock assertions in `tests/interface/test_github_copilot_auth.py` that broke because `_GHESAuthenticator` is a local subclass (not a direct `Authenticator()` call): removed `mock_auth.get_access_token.assert_called_once()` from `test_success_path`, replaced `mock_auth` side_effect with a real raising base class in `test_auth_failure_exits`, removed `mock_auth.get_api_key.assert_called_once()` from `test_api_key_expiry_display`. See §6 note on `_GHESAuthenticator` mock pattern. |
