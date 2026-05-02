@@ -24,5 +24,6 @@ litellm.suppress_debug_info = True
 logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 logging.getLogger("asyncio").propagate = False
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="asyncio")
+warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 configure_copilot_litellm()
