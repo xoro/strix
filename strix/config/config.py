@@ -51,6 +51,7 @@ class Config:
     strix_runtime_backend = _default_runtime_backend()
     strix_sandbox_execution_timeout = "120"
     strix_sandbox_connect_timeout = "10"
+    strix_sandbox_extra_hosts = None
 
     # Telemetry
     strix_telemetry = "1"
