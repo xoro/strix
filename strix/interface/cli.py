@@ -58,15 +58,12 @@ async def run_cli(args: Any) -> None:  # noqa: PLR0915
     results_text.append(f"strix_runs/{args.run_name}", style="#60a5fa")
 
     scan_mode = getattr(args, "scan_mode", "deep")
-    llm_config = LLMConfig(
-        scan_mode=scan_mode,
-        is_whitebox=bool(getattr(args, "local_sources", [])),
-    )
+    model_name = load_settings().llm.model or "unknown"
 
     model_text = Text()
     model_text.append("Model ", style="dim")
     model_text.append("  ")
-    model_text.append(llm_config.model_name, style="bold white")
+    model_text.append(model_name, style="bold white")
 
     note_text = Text()
     note_text.append("\n\n", style="dim")
