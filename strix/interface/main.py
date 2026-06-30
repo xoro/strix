@@ -751,6 +751,18 @@ Examples:
     )
 
     parser.add_argument(
+        "--skills",
+        nargs="+",
+        metavar="SKILL",
+        default=[],
+        help=(
+            "One or more skill names to load into the agent's system prompt "
+            "(e.g. --skills caveman sql_injection). "
+            "Run 'strix --list-skills' to see available skills."
+        ),
+    )
+
+    parser.add_argument(
         "--max-budget-usd",
         type=_positive_budget,
         default=None,
