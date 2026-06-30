@@ -16,14 +16,16 @@ from __future__ import annotations
 from typing import Any
 from uuid import uuid4
 
-from strix.config import Config
+from strix.config import load_settings
 
 
 _COPILOT_VERSION = "0.26.7"
 
 
 def _is_github_copilot_model(model_name: str | None = None) -> bool:
-    name = model_name or Config.get("strix_llm") or ""
+    if model_name is not None:
+        return model_name.lower().startswith("github_copilot/")
+    name = load_settings().llm.model or ""
     return name.lower().startswith("github_copilot/")
 
 

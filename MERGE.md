@@ -368,24 +368,31 @@ git log --oneline --graph -10
 git diff upstream/main --stat  # should only show fork additions
 ```
 
-## Known fragile merge points
+## Known fragile merge points (v1.0+ SDK architecture)
 
-These files are consistently mangled by `--strategy-option theirs` and require careful
-inspection after every merge:
+After the v1.0 rewrite, the old `strix/llm/` fragile points no longer apply.
+New fragile points for future merges:
 
 | File | Why fragile | What to check |
 |------|-------------|---------------|
-| `strix/llm/memory_compressor.py` | Fork wraps `litellm.completion` in a retry loop; upstream uses a simple `try/except`. The merge leaves orphaned `except` blocks outside the loop and sometimes changes `role` from `"user"` to `"assistant"`. | Verify the full function structure matches section 5g exactly. Run the syntax check from section 7. |
-| `strix/llm/llm.py` | Fork's Copilot `"Continue."` check and upstream's `<meta>Continue the task.</meta>` (non-interactive) check both touch the same lines in `_prepare_messages()`. The merge collapses them into the upstream version only. | Verify the `if/elif` from section 5e is present (including `not self.config.interactive`), not two separate `if` blocks. |
+| `strix/config/settings.py` | FreeBSD backend default uses `_default_runtime_backend()` factory; upstream may change `RuntimeSettings.backend` field. | Verify `default_factory=_default_runtime_backend` is preserved after merge. |
+| `strix/config/models.py` | Fork calls `_configure_freebsd_litellm()` and `_configure_copilot_if_needed()` from `configure_sdk_model_defaults()`; upstream adds steps to that function. | Verify both fork calls survive after merge; check `_configure_copilot_if_needed` still calls `configure_copilot_litellm()`. |
+| `strix/core/inputs.py` | Fork injects `extra_headers` into `make_model_settings()`; upstream may change the `ModelSettings` constructor. | Verify `extra_headers=get_copilot_extra_headers() if _is_github_copilot_model(model_name) else None` is present. |
+| `strix/report/dedupe.py` | Fork injects Copilot headers into `dedupe_model_settings`; upstream may restructure `check_duplicate()`. | Verify `extra_headers` injection is present in the `ModelSettings` passed to `model.get_response()`. |
+| `strix/interface/main.py` | Fork adds 6 Copilot helper functions + `warm_up_llm()` Copilot path; upstream changes `warm_up_llm()` and `parse_arguments()` frequently. | Verify all 6 helper functions present, `warm_up_llm()` passes `warmup_settings` with Copilot headers, `--auth-github-copilot` flag in `parse_arguments()`. |
+| `strix/runtime/backends.py` | Fork registers `_podman_backend`; upstream may add new backends or change the registration pattern. | Verify `"podman": _podman_backend` is in `_BACKENDS` dict. |
 
 ## Files unique to our fork (should never be deleted by merge)
 
 | File | Purpose |
 |------|---------|
-| `strix/llm/copilot.py` | Copilot litellm headers & config |
-| `strix/runtime/podman_runtime.py` | Podman container runtime |
-| `tests/llm/test_copilot.py` | Copilot integration tests |
+| `strix/llm/copilot.py` | Copilot litellm headers, config, model-cost-map patches |
+| `strix/runtime/podman_runtime.py` | Legacy Podman runtime reference (pre-v1.0 architecture; kept for reference) |
+| `tests/llm/test_copilot.py` | Copilot integration tests (updated for SDK architecture) |
 | `tests/interface/test_github_copilot_auth.py` | Copilot auth tests |
+| `vendor/fastuuid-stub/` | FreeBSD: stdlib uuid shim (no Rust wheels on FreeBSD) |
+| `vendor/tiktoken-stub/` | FreeBSD: approximate tokenizer (no Rust wheels on FreeBSD) |
+| `vendor/tokenizers-stub/` | FreeBSD: approximate tokenizer (no Rust wheels on FreeBSD) |
 | `MERGE.md` | This maintenance guide (not in upstream) |
 
 Upstream also ships `AGENTS.md`; keep any **local** edits in sync manually if you maintain a fork-specific copy.
@@ -402,3 +409,4 @@ Upstream also ships `AGENTS.md`; keep any **local** edits in sync manually if yo
 | 2026-04-24 | v0.8.3 (9fb1012) | Upstream: Kubernetes security skill, NoSQL injection guide, `--config` full override fix, `asyncio.wait_for` wrap for indefinite hang prevention. Fork: added GHES support for GitHub Copilot auth (`_GHESAuthenticator`, `GITHUB_COPILOT_*` env vars, `GITHUB_COPILOT_USER_API_URL`), bumped litellm to `>=1.83.0` (vanilla PyPI, no local fork). All fork features survived merge cleanly. |
 | 2026-05-02 | — (test fixes) | Fixed three stale mock assertions in `tests/interface/test_github_copilot_auth.py` that broke because `_GHESAuthenticator` is a local subclass (not a direct `Authenticator()` call): removed `mock_auth.get_access_token.assert_called_once()` from `test_success_path`, replaced `mock_auth` side_effect with a real raising base class in `test_auth_failure_exits`, removed `mock_auth.get_api_key.assert_called_once()` from `test_api_key_expiry_display`. See §6 note on `_GHESAuthenticator` mock pattern. |
 | 2026-05-23 | 2380cf5 | Upstream: HTTP request smuggling skill, Docker sandbox host mappings, MiniMax tool calling fix, agent wake-on-state-change (no more 500ms polling), empty-array IDOR/OAST SSRF FP signals, SSTI and Header Injection skills, NoSQL injection skill, `get_message_tokens` added to `memory_compressor.py`. One conflict in `strix/llm/llm.py` imports: kept fork's `maybe_copilot_headers` and merged upstream's `get_message_tokens`. |
+| 2026-06-30 | f554523 (v1.0.4) | **Breaking upstream rewrite (0.8.3 → 1.0.4).** Upstream replaced the entire `strix/llm/` package and `strix/config/config.py` with the `openai-agents[litellm]==0.14.6` SDK. All fork features ported to the new architecture on branch `feat/v1-upstream-merge`. Key changes: (1) `strix/llm/copilot.py` now imports `load_settings` instead of `Config`; (2) Copilot `extra_headers` injected via `ModelSettings.extra_headers` in `make_model_settings()` (`strix/core/inputs.py`) and `check_duplicate()` (`strix/report/dedupe.py`) and `warm_up_llm()` (`strix/interface/main.py`); (3) `configure_copilot_litellm()` triggered from `configure_sdk_model_defaults()` in `strix/config/models.py`; (4) FreeBSD runtime default moved to `_default_runtime_backend()` factory in `strix/config/settings.py`; (5) Podman backend registered in `strix/runtime/backends.py` using Docker SDK pointing at Podman socket; (6) Copilot auth helper functions restored in `strix/interface/main.py`; (7) `[tool.uv.sources]` vendor stubs restored for FreeBSD fastuuid/tiktoken/tokenizers; (8) all fork tests updated to patch `load_settings` instead of `Config`. |

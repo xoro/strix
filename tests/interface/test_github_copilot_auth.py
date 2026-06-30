@@ -56,27 +56,27 @@ class TestIsGithubCopilotModel:
 
     def test_none_returns_false(self) -> None:
         """None (no model configured) should return False."""
-        with patch("strix.interface.main.Config") as mock_config:
-            mock_config.get.return_value = None
+        mock_settings = MagicMock()
+        mock_settings.llm.model = None
+        with patch("strix.interface.main.load_settings", return_value=mock_settings):
             assert _is_github_copilot_model(None) is False
 
     def test_empty_string_returns_false(self) -> None:
         """Empty string should return False."""
-        with patch("strix.interface.main.Config") as mock_config:
-            mock_config.get.return_value = None
-            assert _is_github_copilot_model("") is False
+        assert _is_github_copilot_model("") is False
 
     def test_reads_config_when_no_argument(self) -> None:
-        """When called without an argument, should read from Config."""
-        with patch("strix.interface.main.Config") as mock_config:
-            mock_config.get.return_value = "github_copilot/gpt-4o"
+        """When called without an argument, should read from load_settings."""
+        mock_settings = MagicMock()
+        mock_settings.llm.model = "github_copilot/gpt-4o"
+        with patch("strix.interface.main.load_settings", return_value=mock_settings):
             assert _is_github_copilot_model() is True
-            mock_config.get.assert_called_once_with("strix_llm")
 
     def test_reads_config_none_fallback(self) -> None:
-        """When Config returns None, should return False."""
-        with patch("strix.interface.main.Config") as mock_config:
-            mock_config.get.return_value = None
+        """When settings return None, should return False."""
+        mock_settings = MagicMock()
+        mock_settings.llm.model = None
+        with patch("strix.interface.main.load_settings", return_value=mock_settings):
             assert _is_github_copilot_model() is False
 
 
@@ -343,60 +343,52 @@ class TestParseArgumentsCopilot:
 class TestValidateEnvironmentCopilot:
     """Tests for Copilot-specific behaviour in validate_environment."""
 
-    def test_missing_strix_llm_exits(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def _make_settings(
+        self,
+        model: str | None,
+        api_key: str | None = None,
+    ) -> MagicMock:
+        s = MagicMock()
+        s.llm.model = model
+        s.llm.api_key = api_key
+        s.llm.api_base = None
+        s.integrations.perplexity_api_key = None
+        s.llm.reasoning_effort = "high"
+        return s
+
+    def test_missing_strix_llm_exits(self) -> None:
         """Missing STRIX_LLM (required) should sys.exit(1)."""
-        monkeypatch.delenv("STRIX_LLM", raising=False)
+        with patch("strix.interface.main.load_settings", return_value=self._make_settings(None)):
+            from strix.interface.main import validate_environment
 
-        from strix.interface.main import validate_environment
-
-        with pytest.raises(SystemExit, match="1"):
-            validate_environment()
-
-    def test_copilot_model_does_not_exit(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Copilot model with STRIX_LLM set should not exit (optional vars are fine)."""
-        monkeypatch.setenv("STRIX_LLM", "github_copilot/gpt-4o")
-        monkeypatch.delenv("LLM_API_KEY", raising=False)
-
-        from strix.interface.main import validate_environment
-
-        validate_environment()
-
-    def test_copilot_model_skips_api_key_collection(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """When using a Copilot model, LLM_API_KEY should not appear in optional warnings."""
-        monkeypatch.setenv("STRIX_LLM", "github_copilot/gpt-4o")
-        monkeypatch.delenv("LLM_API_KEY", raising=False)
-        monkeypatch.delenv("STRIX_LLM", raising=False)
-
-        from strix.interface.main import validate_environment
-
-        with (
-            patch("strix.interface.main._is_github_copilot_model", return_value=True),
-            patch("strix.interface.main.Config") as mock_config,
-        ):
-            mock_config.get.side_effect = lambda name: {
-                "strix_llm": None,
-            }.get(name)
-
-            with pytest.raises(SystemExit):
+            with pytest.raises(SystemExit, match="1"):
                 validate_environment()
 
-    def test_non_copilot_model_collects_api_key_warning(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """When using a non-Copilot model, missing LLM_API_KEY should be collected."""
-        monkeypatch.delenv("LLM_API_KEY", raising=False)
-        monkeypatch.delenv("STRIX_LLM", raising=False)
-
-        from strix.interface.main import validate_environment
-
-        with (
-            patch("strix.interface.main._is_github_copilot_model", return_value=False),
-            patch("strix.interface.main.Config") as mock_config,
+    def test_copilot_model_does_not_exit(self) -> None:
+        """Copilot model with STRIX_LLM set should not exit (optional vars are fine)."""
+        with patch(
+            "strix.interface.main.load_settings",
+            return_value=self._make_settings("github_copilot/gpt-4o"),
         ):
-            mock_config.get.side_effect = lambda name: {
-                "strix_llm": None,
-                "llm_api_key": None,
-            }.get(name)
+            from strix.interface.main import validate_environment
+
+            validate_environment()
+
+    def test_copilot_model_skips_api_key_collection(self) -> None:
+        """Copilot model without API key should not exit (LLM_API_KEY is optional)."""
+        with patch(
+            "strix.interface.main.load_settings",
+            return_value=self._make_settings("github_copilot/gpt-4o", api_key=None),
+        ):
+            from strix.interface.main import validate_environment
+
+            # Should not raise — LLM_API_KEY is optional for all models.
+            validate_environment()
+
+    def test_non_copilot_model_collects_api_key_warning(self) -> None:
+        """Non-Copilot model without STRIX_LLM set should exit (STRIX_LLM required)."""
+        with patch("strix.interface.main.load_settings", return_value=self._make_settings(None)):
+            from strix.interface.main import validate_environment
 
             with pytest.raises(SystemExit):
                 validate_environment()
@@ -410,18 +402,30 @@ class TestValidateEnvironmentCopilot:
 class TestWarmUpLlmCopilot:
     """Tests for the Copilot token guard in warm_up_llm."""
 
+    def _make_settings(self, model: str) -> MagicMock:
+        s = MagicMock()
+        s.llm.model = model
+        s.llm.api_key = None
+        s.llm.api_base = None
+        s.llm.timeout = 30
+        s.llm.reasoning_effort = "high"
+        return s
+
     async def test_copilot_without_token_exits(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """Copilot model without a cached token should sys.exit(1)."""
-        monkeypatch.setenv("STRIX_LLM", "github_copilot/gpt-4o")
         monkeypatch.setenv("GITHUB_COPILOT_TOKEN_DIR", str(tmp_path))
         monkeypatch.setenv("GITHUB_COPILOT_ACCESS_TOKEN_FILE", "access-token")
 
-        from strix.interface.main import warm_up_llm
+        with patch(
+            "strix.interface.main.load_settings",
+            return_value=self._make_settings("github_copilot/gpt-4o"),
+        ):
+            from strix.interface.main import warm_up_llm
 
-        with pytest.raises(SystemExit, match="1"):
-            await warm_up_llm()
+            with pytest.raises(SystemExit, match="1"):
+                await warm_up_llm()
 
     async def test_copilot_with_token_proceeds_to_llm_check(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -429,58 +433,48 @@ class TestWarmUpLlmCopilot:
         """Copilot model with a cached token should proceed past the guard."""
         token_file = tmp_path / "access-token"
         token_file.write_text("gho_validtoken123")
-        monkeypatch.setenv("STRIX_LLM", "github_copilot/gpt-4o")
         monkeypatch.setenv("GITHUB_COPILOT_TOKEN_DIR", str(tmp_path))
         monkeypatch.setenv("GITHUB_COPILOT_ACCESS_TOKEN_FILE", "access-token")
-        monkeypatch.delenv("LLM_API_KEY", raising=False)
-        monkeypatch.delenv("LLM_API_BASE", raising=False)
-        monkeypatch.delenv("OPENAI_API_BASE", raising=False)
-        monkeypatch.delenv("LITELLM_BASE_URL", raising=False)
-        monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "OK"
+        mock_model = MagicMock()
+        mock_model.get_response = MagicMock(return_value=MagicMock())
 
-        from strix.interface.main import warm_up_llm
+        with (
+            patch(
+                "strix.interface.main.load_settings",
+                return_value=self._make_settings("github_copilot/gpt-4o"),
+            ),
+            patch("strix.interface.main._validate_github_copilot_token", return_value=True),
+            patch("strix.interface.main.configure_sdk_model_defaults"),
+            patch("strix.interface.main.StrixProvider") as mock_provider,
+            patch("strix.interface.main.asyncio.wait_for", return_value=None),
+        ):
+            mock_provider.return_value.get_model.return_value = mock_model
+            from strix.interface.main import warm_up_llm
 
-        with patch("strix.interface.main.litellm") as mock_litellm:
-            mock_litellm.completion.return_value = mock_response
-            with (
-                patch("strix.interface.main.validate_llm_response"),
-                patch(
-                    "strix.interface.main._validate_github_copilot_token",
-                    return_value=True,
-                ),
-            ):
-                await warm_up_llm()
-
-        mock_litellm.completion.assert_called_once()
+            await warm_up_llm()
 
     async def test_non_copilot_model_skips_guard(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """Non-Copilot models should skip the token guard entirely."""
-        monkeypatch.setenv("STRIX_LLM", "openai/gpt-4o")
-        monkeypatch.setenv("LLM_API_KEY", "sk-test-key")
-        monkeypatch.delenv("LLM_API_BASE", raising=False)
-        monkeypatch.delenv("OPENAI_API_BASE", raising=False)
-        monkeypatch.delenv("LITELLM_BASE_URL", raising=False)
-        monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
         monkeypatch.setenv("GITHUB_COPILOT_TOKEN_DIR", str(tmp_path))
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "OK"
+        with (
+            patch(
+                "strix.interface.main.load_settings",
+                return_value=self._make_settings("openai/gpt-4o"),
+            ),
+            patch("strix.interface.main.configure_sdk_model_defaults"),
+            patch("strix.interface.main.is_known_openai_bare_model", return_value=False),
+            patch("strix.interface.main.StrixProvider") as mock_provider,
+            patch("strix.interface.main.asyncio.wait_for", return_value=None),
+        ):
+            mock_model = MagicMock()
+            mock_provider.return_value.get_model.return_value = mock_model
+            from strix.interface.main import warm_up_llm
 
-        from strix.interface.main import warm_up_llm
-
-        with patch("strix.interface.main.litellm") as mock_litellm:
-            mock_litellm.completion.return_value = mock_response
-            with patch("strix.interface.main.validate_llm_response"):
-                await warm_up_llm()
-
-        mock_litellm.completion.assert_called_once()
+            await warm_up_llm()
 
     async def test_copilot_llm_failure_shows_tip(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -488,27 +482,28 @@ class TestWarmUpLlmCopilot:
         """When a Copilot LLM call fails, the error should include a re-auth tip."""
         token_file = tmp_path / "access-token"
         token_file.write_text("gho_validtoken123")
-        monkeypatch.setenv("STRIX_LLM", "github_copilot/gpt-4o")
         monkeypatch.setenv("GITHUB_COPILOT_TOKEN_DIR", str(tmp_path))
         monkeypatch.setenv("GITHUB_COPILOT_ACCESS_TOKEN_FILE", "access-token")
-        monkeypatch.delenv("LLM_API_KEY", raising=False)
-        monkeypatch.delenv("LLM_API_BASE", raising=False)
-        monkeypatch.delenv("OPENAI_API_BASE", raising=False)
-        monkeypatch.delenv("LITELLM_BASE_URL", raising=False)
-        monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
 
-        from strix.interface.main import warm_up_llm
+        with (
+            patch(
+                "strix.interface.main.load_settings",
+                return_value=self._make_settings("github_copilot/gpt-4o"),
+            ),
+            patch("strix.interface.main._validate_github_copilot_token", return_value=True),
+            patch("strix.interface.main.configure_sdk_model_defaults"),
+            patch("strix.interface.main.StrixProvider") as mock_provider,
+            patch(
+                "strix.interface.main.asyncio.wait_for",
+                side_effect=RuntimeError("Connection refused"),
+            ),
+            pytest.raises(SystemExit, match="1"),
+        ):
+            mock_model = MagicMock()
+            mock_provider.return_value.get_model.return_value = mock_model
+            from strix.interface.main import warm_up_llm
 
-        with patch("strix.interface.main.litellm") as mock_litellm:
-            mock_litellm.completion.side_effect = RuntimeError("Connection refused")
-            with (
-                pytest.raises(SystemExit, match="1"),
-                patch(
-                    "strix.interface.main._validate_github_copilot_token",
-                    return_value=True,
-                ),
-            ):
-                await warm_up_llm()
+            await warm_up_llm()
 
 
 # ---------------------------------------------------------------------------

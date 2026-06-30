@@ -189,10 +189,18 @@ async def check_duplicate(
         configure_sdk_model_defaults(settings)
         resolved_model = model_name.strip()
         model = StrixProvider().get_model(resolved_model)
+
+        from strix.llm.copilot import _is_github_copilot_model, get_copilot_extra_headers
+
+        dedupe_model_settings = ModelSettings(
+            retry=DEFAULT_MODEL_RETRY,
+            include_usage=True,
+            extra_headers=get_copilot_extra_headers() if _is_github_copilot_model(resolved_model) else None,
+        )
         response = await model.get_response(
             system_instructions=DEDUPE_SYSTEM_PROMPT,
             input=user_msg,
-            model_settings=ModelSettings(retry=DEFAULT_MODEL_RETRY, include_usage=True),
+            model_settings=dedupe_model_settings,
             tools=[],
             output_schema=None,
             handoffs=[],

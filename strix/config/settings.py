@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import Literal
 
 from pydantic import AliasChoices, Field
@@ -15,6 +16,12 @@ _BASE_CONFIG = SettingsConfigDict(
     populate_by_name=True,
     extra="ignore",
 )
+
+
+def _default_runtime_backend() -> str:
+    # sys.platform is e.g. "freebsd15" on modern FreeBSD; startswith handles all
+    # versions. STRIX_RUNTIME_BACKEND env var overrides this at settings load time.
+    return "podman" if sys.platform.startswith("freebsd") else "docker"
 
 
 class LlmSettings(BaseSettings):
@@ -46,7 +53,7 @@ class RuntimeSettings(BaseSettings):
         default="ghcr.io/usestrix/strix-sandbox:1.0.0",
         alias="STRIX_IMAGE",
     )
-    backend: str = Field(default="docker", alias="STRIX_RUNTIME_BACKEND")
+    backend: str = Field(default_factory=_default_runtime_backend, alias="STRIX_RUNTIME_BACKEND")
     # Hard cap on a local target's size before we refuse to stream it into the
     # sandbox file-by-file (the SDK copies every file individually, which stalls
     # on large repos). Above this, the user must bind-mount via ``--mount``.

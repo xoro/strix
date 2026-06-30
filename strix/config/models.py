@@ -65,6 +65,8 @@ def configure_sdk_model_defaults(settings: Settings) -> None:
     llm = settings.llm
     set_tracing_disabled(True)
     _configure_litellm_compatibility()
+    _configure_freebsd_litellm()
+    _configure_copilot_if_needed(llm.model)
     if llm.api_key:
         set_default_openai_key(llm.api_key, use_for_tracing=False)
         _configure_litellm_default("api_key", llm.api_key)
@@ -152,6 +154,31 @@ def model_supports_reasoning(model_name: str) -> bool:
     if entry is None and "/" in name:
         entry = litellm.model_cost.get(name.rsplit("/", 1)[1])
     return bool(entry and entry.get("supports_reasoning"))
+
+
+def _configure_freebsd_litellm() -> None:
+    """Disable Hugging Face tokenizer downloads on FreeBSD.
+
+    On FreeBSD, ``tokenizers`` is served by a stdlib stub (no Rust wheels).
+    LiteLLM must not attempt HF downloads that trigger real tokenizer imports.
+    """
+    import platform
+
+    if platform.system() == "FreeBSD":
+        import litellm
+
+        litellm.disable_hf_tokenizer_download = True
+
+
+def _configure_copilot_if_needed(model_name: str | None) -> None:
+    """Apply GitHub Copilot LiteLLM settings when a Copilot model is configured.
+
+    Must run after LiteLLM is importable. Safe to call for non-Copilot models
+    (no-op). Delegates to :func:`strix.llm.copilot.configure_copilot_litellm`.
+    """
+    from strix.llm.copilot import configure_copilot_litellm
+
+    configure_copilot_litellm()
 
 
 def is_known_openai_bare_model(model_name: str) -> bool:

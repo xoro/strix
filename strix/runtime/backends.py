@@ -55,8 +55,41 @@ async def _docker_backend(
     return client, session
 
 
+async def _podman_backend(
+    *,
+    image: str,
+    manifest: Manifest,
+    exposed_ports: tuple[int, ...],
+    bind_mounts: list[dict[str, Any]] | None = None,
+) -> tuple[Any, Any]:
+    """Bring up a session backed by Podman via its Docker-compatible API.
+
+    Podman exposes a Docker-compatible socket. Point the Docker SDK at it
+    by setting the ``DOCKER_HOST`` environment variable before launching:
+
+    - User service: ``DOCKER_HOST=unix:///run/user/<uid>/podman/podman.sock``
+    - Root service: ``DOCKER_HOST=unix:///run/podman/podman.sock``
+
+    ``docker.from_env()`` picks up ``DOCKER_HOST`` automatically. The same
+    ``StrixDockerSandboxClient`` is used as the Docker backend — no extra
+    code is needed because Podman's socket speaks the Docker API.
+    """
+    import docker
+    from agents.sandbox.sandboxes.docker import DockerSandboxClientOptions
+
+    from strix.runtime.docker_client import StrixDockerSandboxClient
+
+    client = StrixDockerSandboxClient(docker.from_env())
+    client.strix_bind_mounts = bind_mounts or []
+    options = DockerSandboxClientOptions(image=image, exposed_ports=exposed_ports)
+    session = await client.create(options=options, manifest=manifest)
+    await session.start()
+    return client, session
+
+
 _BACKENDS: dict[str, SandboxBackend] = {
     "docker": _docker_backend,
+    "podman": _podman_backend,
 }
 
 

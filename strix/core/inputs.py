@@ -112,10 +112,15 @@ def make_model_settings(
     *,
     model_name: str,
 ) -> ModelSettings:
+    from strix.llm.copilot import _is_github_copilot_model, get_copilot_extra_headers
+
     model_settings = ModelSettings(
         parallel_tool_calls=False,
         retry=DEFAULT_MODEL_RETRY,
         include_usage=True,
+        # Inject Copilot extra headers when using a github_copilot/ model.
+        # The openai-agents SDK passes these through to every LiteLLM API call.
+        extra_headers=get_copilot_extra_headers() if _is_github_copilot_model(model_name) else None,
     )
     if (
         reasoning_effort is not None

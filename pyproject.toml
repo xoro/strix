@@ -58,10 +58,18 @@ dev = [
   "pyright>=1.1.401",
   "bandit>=1.8.3",
   "pre-commit>=4.2.0",
-  "pyinstaller>=6.17.0; python_version >= '3.12' and python_version < '3.15'",
+  "pyinstaller>=6.17.0; python_version >= '3.12' and python_version < '3.15' and platform_system != 'FreeBSD'",
   "pytest>=8.3",
   "pytest-asyncio>=0.24",
 ]
+
+[tool.uv.sources]
+# PyPI fastuuid is Rust wheels only (no FreeBSD); source builds need maturin + Rust.
+# litellm uses it as a uuid drop-in — stdlib is sufficient for Strix.
+fastuuid = { path = "vendor/fastuuid-stub", editable = false }
+# tiktoken/tokenizers: PyPI wheels exclude FreeBSD; builds need Rust. Stubs are rough token estimates.
+tiktoken = { path = "vendor/tiktoken-stub", editable = false, marker = "platform_system == 'FreeBSD'" }
+tokenizers = { path = "vendor/tokenizers-stub", editable = false, marker = "platform_system == 'FreeBSD'" }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -107,6 +115,7 @@ module = [
     "textual.*",
     "cvss.*",
     "docker.*",
+    "podman.*",
     "caido_sdk_client.*",
     "pydantic_settings.*",
 ]

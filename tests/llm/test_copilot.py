@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
@@ -13,10 +12,6 @@ from strix.llm.copilot import (
     get_copilot_extra_headers,
     maybe_copilot_headers,
 )
-
-
-if TYPE_CHECKING:
-    from strix.llm.llm import LLM
 
 
 # ---------------------------------------------------------------------------
@@ -47,15 +42,18 @@ class TestIsGithubCopilotModel:
         ],
     )
     def test_non_copilot_models_rejected(self, model_name: str) -> None:
-        with patch("strix.llm.copilot.Config.get", return_value=None):
-            assert _is_github_copilot_model(model_name) is False
+        assert _is_github_copilot_model(model_name) is False
 
     def test_none_falls_back_to_config(self) -> None:
-        with patch("strix.llm.copilot.Config.get", return_value="github_copilot/gpt-4o"):
+        mock_settings = __import__("unittest.mock", fromlist=["MagicMock"]).MagicMock()
+        mock_settings.llm.model = "github_copilot/gpt-4o"
+        with patch("strix.llm.copilot.load_settings", return_value=mock_settings):
             assert _is_github_copilot_model(None) is True
 
     def test_none_with_non_copilot_config(self) -> None:
-        with patch("strix.llm.copilot.Config.get", return_value="openai/gpt-4o"):
+        mock_settings = __import__("unittest.mock", fromlist=["MagicMock"]).MagicMock()
+        mock_settings.llm.model = "openai/gpt-4o"
+        with patch("strix.llm.copilot.load_settings", return_value=mock_settings):
             assert _is_github_copilot_model(None) is False
 
 
@@ -65,13 +63,23 @@ class TestIsGithubCopilotModel:
 
 
 class TestConfigureCopilotLitellm:
+    def _mock_settings(self, model: str | None):
+        from unittest.mock import MagicMock
+
+        s = MagicMock()
+        s.llm.model = model
+        return s
+
     def test_sets_flag_for_copilot_model(self) -> None:
         import litellm
 
         original = litellm.disable_copilot_system_to_assistant
         try:
             litellm.disable_copilot_system_to_assistant = False
-            with patch("strix.llm.copilot.Config.get", return_value="github_copilot/gpt-4o"):
+            with patch(
+                "strix.llm.copilot.load_settings",
+                return_value=self._mock_settings("github_copilot/gpt-4o"),
+            ):
                 configure_copilot_litellm()
             assert litellm.disable_copilot_system_to_assistant is True
         finally:
@@ -83,7 +91,10 @@ class TestConfigureCopilotLitellm:
         original = litellm.disable_copilot_system_to_assistant
         try:
             litellm.disable_copilot_system_to_assistant = False
-            with patch("strix.llm.copilot.Config.get", return_value="openai/gpt-4o"):
+            with patch(
+                "strix.llm.copilot.load_settings",
+                return_value=self._mock_settings("openai/gpt-4o"),
+            ):
                 configure_copilot_litellm()
             assert litellm.disable_copilot_system_to_assistant is False
         finally:
@@ -95,20 +106,28 @@ class TestConfigureCopilotLitellm:
         original = litellm.disable_copilot_system_to_assistant
         try:
             litellm.disable_copilot_system_to_assistant = False
-            with patch("strix.llm.copilot.Config.get", return_value=None):
+            with patch(
+                "strix.llm.copilot.load_settings",
+                return_value=self._mock_settings(None),
+            ):
                 configure_copilot_litellm()
             assert litellm.disable_copilot_system_to_assistant is False
         finally:
             litellm.disable_copilot_system_to_assistant = original
 
-    def test_called_from_llm_init(self) -> None:
-        """Verify that importing strix.llm triggers configure_copilot_litellm."""
+    def test_called_from_config_models(self) -> None:
+        """Verify that configure_sdk_model_defaults triggers configure_copilot_litellm."""
+        from unittest.mock import MagicMock
+
+        from strix.config.models import configure_sdk_model_defaults
+
+        settings = MagicMock()
+        settings.llm.model = "github_copilot/gpt-4o"
+        settings.llm.api_key = None
+        settings.llm.api_base = None
+
         with patch("strix.llm.copilot.configure_copilot_litellm") as mock_configure:
-            import importlib
-
-            import strix.llm
-
-            importlib.reload(strix.llm)
+            configure_sdk_model_defaults(settings)
             mock_configure.assert_called_once()
 
 
@@ -163,7 +182,11 @@ class TestMaybeCopilotHeaders:
         assert result == {}
 
     def test_none_delegates_to_config(self) -> None:
-        with patch("strix.llm.copilot.Config.get", return_value="github_copilot/gpt-4o"):
+        from unittest.mock import MagicMock
+
+        mock_settings = MagicMock()
+        mock_settings.llm.model = "github_copilot/gpt-4o"
+        with patch("strix.llm.copilot.load_settings", return_value=mock_settings):
             result = maybe_copilot_headers(None)
             assert "extra_headers" in result
 
@@ -180,211 +203,92 @@ class TestMaybeCopilotHeaders:
 
 
 # ---------------------------------------------------------------------------
-# Integration: _build_completion_args includes headers
+# Integration: make_model_settings injects Copilot headers
 # ---------------------------------------------------------------------------
 
 
-class TestBuildCompletionArgsIncludesHeaders:
-    """Verify that LLM._build_completion_args merges Copilot headers."""
+class TestMakeModelSettingsIncludesHeaders:
+    """Verify that make_model_settings populates extra_headers for Copilot models."""
 
     def test_copilot_model_gets_extra_headers(self) -> None:
-        from strix.llm.config import LLMConfig
-        from strix.llm.llm import LLM
+        from strix.core.inputs import make_model_settings
 
-        config = LLMConfig(model_name="github_copilot/gpt-4o")
-        llm = LLM(config)
-        args = llm._build_completion_args([{"role": "user", "content": "hi"}])
-        assert "extra_headers" in args
-        assert "editor-version" in args["extra_headers"]
+        settings = make_model_settings(None, model_name="github_copilot/gpt-4o")
+        assert settings.extra_headers is not None
+        assert "editor-version" in settings.extra_headers
 
     def test_non_copilot_model_no_extra_headers(self) -> None:
-        from strix.llm.config import LLMConfig
-        from strix.llm.llm import LLM
+        from strix.core.inputs import make_model_settings
 
-        config = LLMConfig(model_name="openai/gpt-4o")
-        llm = LLM(config)
-        args = llm._build_completion_args([{"role": "user", "content": "hi"}])
-        assert "extra_headers" not in args
+        settings = make_model_settings(None, model_name="openai/gpt-4o")
+        assert settings.extra_headers is None
 
 
 # ---------------------------------------------------------------------------
-# Integration: dedupe.check_duplicate passes headers
+# Integration: dedupe.check_duplicate passes headers (new SDK path)
 # ---------------------------------------------------------------------------
 
 
 class TestDedupePassesCopilotHeaders:
-    @patch("strix.llm.dedupe.litellm.completion")
-    @patch(
-        "strix.llm.dedupe.resolve_llm_config", return_value=("github_copilot/gpt-4o", None, None)
-    )
-    def test_copilot_model_sends_headers(self, mock_resolve, mock_completion) -> None:
-        mock_response = type(
-            "Resp",
-            (),
-            {
-                "choices": [
-                    type(
-                        "Choice",
-                        (),
-                        {
-                            "message": type(
-                                "Msg",
-                                (),
-                                {
-                                    "content": (
-                                        "<dedupe_result>"
-                                        "<is_duplicate>false</is_duplicate>"
-                                        "<duplicate_id></duplicate_id>"
-                                        "<confidence>0.9</confidence>"
-                                        "<reason>Different</reason>"
-                                        "</dedupe_result>"
-                                    )
-                                },
-                            )()
-                        },
-                    )()
-                ]
-            },
-        )()
-        mock_completion.return_value = mock_response
+    @pytest.mark.asyncio
+    async def test_copilot_model_sends_headers(self) -> None:
+        from unittest.mock import AsyncMock, MagicMock
 
-        from strix.llm.dedupe import check_duplicate
+        from strix.report.dedupe import check_duplicate
 
-        candidate = {"title": "XSS in /search", "endpoint": "/search"}
-        existing = [{"id": "vuln-001", "title": "SQLi in /login", "endpoint": "/login"}]
-        check_duplicate(candidate, existing)
+        mock_response = MagicMock()
+        mock_response.usage = None
+        mock_response.output = [MagicMock()]
+        mock_response.output[0].content = [MagicMock()]
+        mock_response.output[0].content[0].text = (
+            '{"is_duplicate": false, "duplicate_id": "", "confidence": 0.9, "reason": "Different"}'
+        )
 
-        _, kwargs = mock_completion.call_args
-        assert "extra_headers" in kwargs
-        assert "editor-version" in kwargs["extra_headers"]
+        mock_model = MagicMock()
+        mock_model.get_response = AsyncMock(return_value=mock_response)
+        captured_settings: list = []
 
+        original_get_response = mock_model.get_response
 
-# ---------------------------------------------------------------------------
-# Integration: memory_compressor._summarize_messages passes headers
-# ---------------------------------------------------------------------------
+        async def capture(*args, **kwargs):
+            captured_settings.append(kwargs.get("model_settings"))
+            return mock_response
 
+        mock_model.get_response = capture
 
-class TestMemoryCompressorPassesCopilotHeaders:
-    @patch("strix.llm.memory_compressor.litellm.completion")
-    @patch("strix.llm.memory_compressor.resolve_llm_config", return_value=(None, None, None))
-    def test_copilot_model_sends_headers(self, mock_resolve, mock_completion) -> None:
-        mock_response = type(
-            "Resp",
-            (),
-            {
-                "choices": [
-                    type(
-                        "Choice",
-                        (),
-                        {"message": type("Msg", (), {"content": "Summary of messages"})()},
-                    )()
-                ]
-            },
-        )()
-        mock_completion.return_value = mock_response
+        settings_mock = MagicMock()
+        settings_mock.llm.model = "github_copilot/gpt-4o"
 
-        from strix.llm.memory_compressor import _summarize_messages
+        with (
+            patch("strix.report.dedupe.load_settings", return_value=settings_mock),
+            patch("strix.report.dedupe.configure_sdk_model_defaults"),
+            patch("strix.report.dedupe.StrixProvider") as mock_provider,
+            patch("strix.report.dedupe.get_global_report_state", return_value=None),
+        ):
+            mock_provider.return_value.get_model.return_value = mock_model
+            await check_duplicate(
+                {"title": "XSS in /search"},
+                [{"id": "vuln-001", "title": "SQLi in /login"}],
+            )
 
-        messages = [{"role": "user", "content": "test message"}]
-        _summarize_messages(messages, "github_copilot/gpt-4o")
-
-        _, kwargs = mock_completion.call_args
-        assert "extra_headers" in kwargs
-        assert "editor-version" in kwargs["extra_headers"]
+        assert len(captured_settings) == 1
+        ms = captured_settings[0]
+        assert ms is not None
+        assert ms.extra_headers is not None
+        assert "editor-version" in ms.extra_headers
 
 
 # ---------------------------------------------------------------------------
-# LLM._is_copilot
+# (TestMemoryCompressorPassesCopilotHeaders removed: memory_compressor is now
+# handled by the openai-agents SDK which uses ModelSettings.extra_headers set
+# in make_model_settings / check_duplicate — see TestMakeModelSettingsIncludesHeaders
+# and TestDedupePassesCopilotHeaders above.)
 # ---------------------------------------------------------------------------
 
 
-class TestIsCopilot:
-    def test_copilot_model(self) -> None:
-        from strix.llm.config import LLMConfig
-        from strix.llm.llm import LLM
-
-        llm = LLM(LLMConfig(model_name="github_copilot/claude-opus-4.6"))
-        assert llm._is_copilot() is True
-
-    def test_non_copilot_model(self) -> None:
-        from strix.llm.config import LLMConfig
-        from strix.llm.llm import LLM
-
-        llm = LLM(LLMConfig(model_name="openai/gpt-4o"))
-        assert llm._is_copilot() is False
-
-    def test_none_model(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        from strix.llm.config import LLMConfig
-        from strix.llm.llm import LLM
-
-        monkeypatch.delenv("STRIX_LLM", raising=False)
-
-        def _config_get(key: str) -> str | None:
-            if key == "strix_llm":
-                return "openai/gpt-4o"
-            return None
-
-        with patch("strix.llm.config.Config.get", side_effect=_config_get):
-            llm = LLM(LLMConfig(model_name=None))
-        assert llm._is_copilot() is False
-
-    def test_case_insensitive(self) -> None:
-        from strix.llm.config import LLMConfig
-        from strix.llm.llm import LLM
-
-        llm = LLM(LLMConfig(model_name="GITHUB_COPILOT/gpt-4o"))
-        assert llm._is_copilot() is True
-
-
 # ---------------------------------------------------------------------------
-# _prepare_messages: Copilot assistant-trailing fix
+# (TestBuildCompletionArgsIncludesHeaders, TestIsCopilot, TestPrepareMessagesCopilotFix
+# removed: the old strix.llm.llm.LLM class and strix.llm.config.LLMConfig were
+# replaced by the openai-agents SDK in v1.0. Equivalent coverage is provided by
+# TestMakeModelSettingsIncludesHeaders above.)
 # ---------------------------------------------------------------------------
-
-
-class TestPrepareMessagesCopilotFix:
-    """Verify _prepare_messages appends a user 'Continue.' for Copilot
-    when the conversation ends with an assistant message."""
-
-    def _make_llm(self, model_name: str) -> LLM:
-        from strix.llm.config import LLMConfig
-        from strix.llm.llm import LLM
-
-        return LLM(LLMConfig(model_name=model_name))
-
-    def test_copilot_appends_continue_when_last_is_assistant(self) -> None:
-        llm = self._make_llm("github_copilot/claude-opus-4.6")
-        history = [
-            {"role": "user", "content": "Scan the target"},
-            {"role": "assistant", "content": "I found some issues."},
-        ]
-        messages = llm._prepare_messages(history)
-        assert messages[-1]["role"] == "user"
-        assert messages[-1]["content"] == "Continue."
-
-    def test_copilot_no_append_when_last_is_user(self) -> None:
-        llm = self._make_llm("github_copilot/claude-opus-4.6")
-        history = [
-            {"role": "user", "content": "Scan the target"},
-        ]
-        messages = llm._prepare_messages(history)
-        assert messages[-1]["role"] == "user"
-        assert messages[-1]["content"] != "Continue."
-
-    def test_non_copilot_appends_meta_continue_when_last_is_assistant(self) -> None:
-        llm = self._make_llm("openai/gpt-4o")
-        history = [
-            {"role": "user", "content": "Scan the target"},
-            {"role": "assistant", "content": "I found some issues."},
-        ]
-        messages = llm._prepare_messages(history)
-        assert messages[-1]["role"] == "user"
-        assert messages[-1]["content"] == "<meta>Continue the task.</meta>"
-
-    def test_copilot_appends_continue_when_last_is_system(self) -> None:
-        """Edge case: if somehow conversation has only system message."""
-        llm = self._make_llm("github_copilot/claude-opus-4.6")
-        llm.agent_name = None
-        history: list = []
-        messages = llm._prepare_messages(history)
-        assert messages[-1]["role"] == "user"
-        assert messages[-1]["content"] == "Continue."

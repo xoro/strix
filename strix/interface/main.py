@@ -5,6 +5,9 @@ Strix Agent Interface
 
 import argparse
 import asyncio
+import json
+import logging
+import os
 import shutil
 import sys
 from datetime import UTC, datetime
@@ -61,6 +64,233 @@ import logging  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# GitHub Copilot authentication helpers
+# ---------------------------------------------------------------------------
+
+
+def _is_github_copilot_model(model_name: str | None = None) -> bool:
+    # When called with an explicit name (including ""), use it as-is.
+    # When called with no argument (None), read the configured model from settings.
+    if model_name is None:
+        name = load_settings().llm.model or ""
+    else:
+        name = model_name
+    return name.lower().startswith("github_copilot/")
+
+
+def _get_github_copilot_token_path() -> Path:
+    token_dir = os.getenv(
+        "GITHUB_COPILOT_TOKEN_DIR",
+        str(Path.home() / ".config/litellm/github_copilot"),
+    )
+    return Path(token_dir) / os.getenv("GITHUB_COPILOT_ACCESS_TOKEN_FILE", "access-token")
+
+
+def _has_github_copilot_token() -> bool:
+    token_path = _get_github_copilot_token_path()
+    if not token_path.exists():
+        return False
+    try:
+        return bool(token_path.read_text().strip())
+    except OSError:
+        return False
+
+
+def _validate_github_copilot_token() -> bool:
+    """Check whether the stored GitHub Copilot access token is still valid.
+
+    Returns ``True`` when the token is accepted by GitHub, ``False`` otherwise.
+    """
+    token_path = _get_github_copilot_token_path()
+    try:
+        token = token_path.read_text().strip()
+        if not token:
+            return False
+    except OSError:
+        return False
+
+    try:
+        import httpx
+
+        user_api_url = os.getenv("GITHUB_COPILOT_USER_API_URL", "https://api.github.com/user")
+        resp = httpx.get(
+            user_api_url,
+            headers={
+                "Authorization": f"token {token}",
+                "Accept": "application/json",
+            },
+            timeout=10,
+        )
+    except Exception:  # noqa: BLE001
+        return False
+    else:
+        return resp.status_code == 200
+
+
+def _clear_github_copilot_tokens() -> None:
+    """Remove cached GitHub Copilot token files so a fresh login is triggered."""
+    import contextlib
+
+    token_path = _get_github_copilot_token_path()
+    api_key_path = token_path.parent / os.getenv("GITHUB_COPILOT_API_KEY_FILE", "api-key.json")
+    for path in (token_path, api_key_path):
+        with contextlib.suppress(OSError):
+            path.unlink(missing_ok=True)
+
+
+def authenticate_github_copilot() -> None:  # noqa: PLR0915
+    console = Console()
+
+    if _has_github_copilot_token():
+        console.print()
+        console.print("[dim]Existing GitHub Copilot token found.[/]")
+        console.print("[dim]Validating token...[/]")
+        if _validate_github_copilot_token():
+            console.print("[dim]Token is still valid.[/]")
+        else:
+            console.print("[dim yellow]Token is expired or invalid. Clearing cached tokens...[/]")
+            _clear_github_copilot_tokens()
+            console.print("[dim]Starting fresh authentication...[/]")
+        console.print()
+
+    try:
+        import time as _time
+
+        from litellm.llms.github_copilot.authenticator import Authenticator
+        from litellm.llms.github_copilot.common_utils import GetAccessTokenError
+
+        class _GHESAuthenticator(Authenticator):
+            """Authenticator subclass that respects expires_in/interval from the
+            device code response instead of the upstream 60-second hard cap."""
+
+            def _poll_for_access_token(
+                self,
+                device_code: str,
+                interval: int = 5,
+                expires_in: int = 900,
+            ) -> str:
+                import httpx
+                from litellm.llms.custom_httpx.http_handler import _get_httpx_client
+
+                sync_client = _get_httpx_client()
+                max_attempts = max(1, expires_in // max(1, interval))
+                access_token_url = os.getenv(
+                    "GITHUB_COPILOT_ACCESS_TOKEN_URL",
+                    "https://github.com/login/oauth/access_token",
+                )
+                client_id = os.getenv("GITHUB_COPILOT_CLIENT_ID", "Iv1.b507a08c87ecfe98")
+                for attempt in range(max_attempts):
+                    try:
+                        resp = sync_client.post(
+                            access_token_url,
+                            headers=self._get_github_headers(),
+                            json={
+                                "client_id": client_id,
+                                "device_code": device_code,
+                                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                            },
+                        )
+                        resp.raise_for_status()
+                        resp_json = resp.json()
+                        if "access_token" in resp_json:
+                            return resp_json["access_token"]
+                        elif resp_json.get("error") != "authorization_pending":
+                            pass  # unexpected response, keep polling
+                    except httpx.HTTPStatusError as exc:
+                        raise GetAccessTokenError(
+                            message=f"Failed to get access token: {exc}",
+                            status_code=400,
+                        ) from exc
+                    _time.sleep(interval)
+                raise GetAccessTokenError(
+                    message="Timed out waiting for user to authorize the device",
+                    status_code=400,
+                )
+
+            def _login(self) -> str:
+                device_code_info = self._get_device_code()
+                device_code = device_code_info["device_code"]
+                user_code = device_code_info["user_code"]
+                verification_uri = device_code_info["verification_uri"]
+                interval = int(device_code_info.get("interval", 5))
+                expires_in = int(device_code_info.get("expires_in", 900))
+                print(  # noqa: T201
+                    f"Please visit {verification_uri} and enter code {user_code} to authenticate.",
+                    flush=True,
+                )
+                return self._poll_for_access_token(
+                    device_code, interval=interval, expires_in=expires_in
+                )
+
+        auth = _GHESAuthenticator()
+        auth.get_access_token()
+    except Exception as e:  # noqa: BLE001
+        error_text = Text()
+        error_text.append("GITHUB COPILOT AUTHENTICATION FAILED", style="bold red")
+        error_text.append("\n\n", style="white")
+        error_text.append(f"Error: {e}", style="dim white")
+
+        panel = Panel(
+            error_text,
+            title="[bold white]STRIX",
+            title_align="left",
+            border_style="red",
+            padding=(1, 2),
+        )
+        console.print("\n")
+        console.print(panel)
+        console.print()
+        sys.exit(1)
+
+    console.print()
+
+    success_text = Text()
+    success_text.append("GitHub Copilot authentication successful", style="bold #22c55e")
+    success_text.append("\n\n", style="white")
+    success_text.append("Token stored at: ", style="white")
+    success_text.append(str(_get_github_copilot_token_path()), style="#60a5fa")
+    success_text.append("\n\n", style="white")
+    success_text.append("You can now use GitHub Copilot as your LLM provider:\n", style="white")
+    success_text.append(
+        "  export STRIX_LLM='github_copilot/gpt-4o'\n",
+        style="dim white",
+    )
+    success_text.append(
+        "  strix --target https://example.com",
+        style="dim white",
+    )
+
+    panel = Panel(
+        success_text,
+        title="[bold white]STRIX",
+        title_align="left",
+        border_style="#22c55e",
+        padding=(1, 2),
+    )
+    console.print(panel)
+    console.print()
+
+    try:
+        api_key = auth.get_api_key()
+        if api_key:
+            token_path = _get_github_copilot_token_path()
+            api_key_path = token_path.parent / os.getenv(
+                "GITHUB_COPILOT_API_KEY_FILE", "api-key.json"
+            )
+            if api_key_path.exists():
+                with api_key_path.open() as f:
+                    api_key_info = json.load(f)
+                    expires_at = api_key_info.get("expires_at", 0)
+                    if expires_at:
+                        expires_dt = datetime.fromtimestamp(expires_at, tz=UTC)
+                        console.print(
+                            f"[dim]API key expires at: {expires_dt.strftime('%Y-%m-%d %H:%M:%S UTC')}[/]"
+                        )
+    except Exception:  # noqa: BLE001
+        pass  # API key display is best-effort
 
 
 def validate_environment() -> None:
@@ -301,11 +531,16 @@ async def warm_up_llm() -> None:
             sys.exit(1)
 
         model = StrixProvider().get_model(raw_model)
+        from strix.llm.copilot import get_copilot_extra_headers
+
+        warmup_settings = ModelSettings(
+            extra_headers=get_copilot_extra_headers() if _is_github_copilot_model(raw_model) else None,
+        )
         await asyncio.wait_for(
             model.get_response(
                 system_instructions="You are a helpful assistant.",
                 input="Reply with just 'OK'.",
-                model_settings=ModelSettings(),
+                model_settings=warmup_settings,
                 tools=[],
                 output_schema=None,
                 handoffs=[],
