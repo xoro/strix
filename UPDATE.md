@@ -1,6 +1,15 @@
-# Merging Upstream Strix into Our Fork
+# Updating This Fork
 
-This document describes how to merge the upstream [usestrix/strix](https://github.com/usestrix/strix) repository into our fork.
+This document covers two independent update workflows:
+
+1. **[Upstream Strix](#upstream-strix-merge)** — merging new releases from [usestrix/strix](https://github.com/usestrix/strix) into our fork.
+2. **[Caveman Skill](#caveman-skill-update)** — porting relevant improvements from [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) into `strix/skills/custom/caveman.md`.
+
+---
+
+## Upstream Strix Merge
+
+This section describes how to merge the upstream [usestrix/strix](https://github.com/usestrix/strix) repository into our fork.
 
 ## Overview
 
@@ -393,7 +402,7 @@ New fragile points for future merges:
 | `vendor/fastuuid-stub/` | FreeBSD: stdlib uuid shim (no Rust wheels on FreeBSD) |
 | `vendor/tiktoken-stub/` | FreeBSD: approximate tokenizer (no Rust wheels on FreeBSD) |
 | `vendor/tokenizers-stub/` | FreeBSD: approximate tokenizer (no Rust wheels on FreeBSD) |
-| `MERGE.md` | This maintenance guide (not in upstream) |
+| `UPDATE.md` | This maintenance guide (not in upstream) |
 
 Upstream also ships `AGENTS.md`; keep any **local** edits in sync manually if you maintain a fork-specific copy.
 
@@ -405,8 +414,85 @@ Upstream also ships `AGENTS.md`; keep any **local** edits in sync manually if yo
 | 2026-02-20 | — (post-merge fix) | Added retry with exponential backoff to `memory_compressor.py` `_summarize_messages()`. Increased default timeout from 30s to 120s. Wired up the previously unused `SUMMARIZE_MAX_RETRIES` / `SUMMARIZE_INITIAL_BACKOFF` constants. Fixes repeated `litellm.Timeout` errors during CI runs with Copilot. |
 | 2026-02-22 | v0.8.1 | Upstream added `normalize_tool_format` / `resolve_strix_model` utilities, centralized strix model resolution with separate API and capability names (`litellm_model` / `canonical_model` in `LLMConfig`), fixed tool-call tag parsing, added `<meta>Continue the task.</meta>` fallback for all models when last message is assistant. Restored all fork-specific Copilot/Podman/FreeBSD changes. Fixed merge-mangled `_summarize_messages()` (orphaned except block + wrong `role: assistant`). Updated `test_non_copilot_no_append_even_with_assistant_last` → `test_non_copilot_appends_meta_continue_when_last_is_assistant` to reflect new upstream behaviour. |
 | 2026-04 | v0.8.3+ (upstream uv) | Upstream migrated to **uv** (`uv.lock`, hatchling, `[project]` deps). Integrated fork on GitHub (`xoro/strix`); merge conflicts resolved with PEP 621 dependency strings for docker/podman, `strix_image` 0.1.13, and `_prepare_messages()` Copilot + **non-interactive** meta-continue `elif`. |
-| 2026-04 | — (docs) | **MERGE.md §5a** updated: use **`platform_system`** (not **`sys_platform`**) for FreeBSD; document **litellm** / **traceloop** / **scrubadub** / **uv.sources** stubs / dev **ruff**–**pyinstaller** exclusions; **§5c** FreeBSD tokenizer note; telemetry scrubadub fallback. |
+| 2026-04 | — (docs) | **UPDATE.md §5a** updated: use **`platform_system`** (not **`sys_platform`**) for FreeBSD; document **litellm** / **traceloop** / **scrubadub** / **uv.sources** stubs / dev **ruff**–**pyinstaller** exclusions; **§5c** FreeBSD tokenizer note; telemetry scrubadub fallback. |
 | 2026-04-24 | v0.8.3 (9fb1012) | Upstream: Kubernetes security skill, NoSQL injection guide, `--config` full override fix, `asyncio.wait_for` wrap for indefinite hang prevention. Fork: added GHES support for GitHub Copilot auth (`_GHESAuthenticator`, `GITHUB_COPILOT_*` env vars, `GITHUB_COPILOT_USER_API_URL`), bumped litellm to `>=1.83.0` (vanilla PyPI, no local fork). All fork features survived merge cleanly. |
 | 2026-05-02 | — (test fixes) | Fixed three stale mock assertions in `tests/interface/test_github_copilot_auth.py` that broke because `_GHESAuthenticator` is a local subclass (not a direct `Authenticator()` call): removed `mock_auth.get_access_token.assert_called_once()` from `test_success_path`, replaced `mock_auth` side_effect with a real raising base class in `test_auth_failure_exits`, removed `mock_auth.get_api_key.assert_called_once()` from `test_api_key_expiry_display`. See §6 note on `_GHESAuthenticator` mock pattern. |
 | 2026-05-23 | 2380cf5 | Upstream: HTTP request smuggling skill, Docker sandbox host mappings, MiniMax tool calling fix, agent wake-on-state-change (no more 500ms polling), empty-array IDOR/OAST SSRF FP signals, SSTI and Header Injection skills, NoSQL injection skill, `get_message_tokens` added to `memory_compressor.py`. One conflict in `strix/llm/llm.py` imports: kept fork's `maybe_copilot_headers` and merged upstream's `get_message_tokens`. |
 | 2026-06-30 | f554523 (v1.0.4) | **Breaking upstream rewrite (0.8.3 → 1.0.4).** Upstream replaced the entire `strix/llm/` package and `strix/config/config.py` with the `openai-agents[litellm]==0.14.6` SDK. All fork features ported to the new architecture on branch `feat/v1-upstream-merge`. Key changes: (1) `strix/llm/copilot.py` now imports `load_settings` instead of `Config`; (2) Copilot `extra_headers` injected via `ModelSettings.extra_headers` in `make_model_settings()` (`strix/core/inputs.py`) and `check_duplicate()` (`strix/report/dedupe.py`) and `warm_up_llm()` (`strix/interface/main.py`); (3) `configure_copilot_litellm()` triggered from `configure_sdk_model_defaults()` in `strix/config/models.py`; (4) FreeBSD runtime default moved to `_default_runtime_backend()` factory in `strix/config/settings.py`; (5) Podman backend registered in `strix/runtime/backends.py` using Docker SDK pointing at Podman socket; (6) Copilot auth helper functions restored in `strix/interface/main.py`; (7) `[tool.uv.sources]` vendor stubs restored for FreeBSD fastuuid/tiktoken/tokenizers; (8) all fork tests updated to patch `load_settings` instead of `Config`. |
+
+---
+
+## Caveman Skill Update
+
+### Overview
+
+`strix/skills/custom/caveman.md` is a Strix-specific **adaptation** of the
+caveman communication style from [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman).
+It is **not a fork** — it is a purpose-built pentest-agent skill that borrows the
+compression philosophy but applies it to a different context (internal agent reasoning
+during scans, not AI assistant replies to users).
+
+Key differences from the upstream caveman `SKILL.md`:
+
+| Upstream caveman | Strix caveman |
+|---|---|
+| Compresses AI assistant replies to humans | Compresses pentest agent's internal reasoning and tool narration |
+| Intensity levels: lite / full / ultra / wenyan | Single mode (pentest context doesn't benefit from levelled intensity) |
+| Auto-clarity rules for destructive ops | Protects `report_vulnerability` fields explicitly — those go to humans |
+| Persistence / session rules | Stateless per-scan skill injection |
+
+### When to Update
+
+Check upstream when:
+- A new major caveman release appears (see [releases](https://github.com/JuliusBrussee/caveman/releases))
+- The compression rules or auto-clarity logic changes significantly
+- New intensity levels or language-preservation rules are added that could benefit the pentest agent
+
+### How to Update
+
+1. **Read the upstream diff** — compare the latest
+   `skills/caveman/SKILL.md` from the upstream repo against what was current
+   when we last updated:
+
+   ```sh
+   curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/skills/caveman/SKILL.md
+   ```
+
+2. **Identify portable improvements** — look for changes to:
+   - The core compression rules (always portable)
+   - Auto-clarity / safety triggers (adapt to pentest context)
+   - Language-preservation rules (portable as-is)
+   - Intensity levels (evaluate whether useful for agent reasoning)
+
+3. **Do NOT port directly**:
+   - Persistence / session rules (irrelevant — skills are injected statically)
+   - User-facing slash commands (`/caveman`, `stop caveman`)
+   - Statusline / token-count tracking
+   - Anything that assumes a human conversation rather than an autonomous agent
+
+4. **Edit** `strix/skills/custom/caveman.md` with the ported improvements.
+
+5. **Verify** the skill still loads correctly:
+
+   ```sh
+   uv run python -c "from strix.skills import load_skills; print(load_skills(['caveman']))"
+   ```
+
+6. **Test** a quick scan with the skill to confirm agent behaviour is unchanged:
+
+   ```sh
+   strix --non-interactive --target <target> --scan-mode quick --skills caveman
+   ```
+
+7. **Commit** the update with a reference to the upstream caveman release or commit:
+
+   ```sh
+   git add strix/skills/custom/caveman.md
+   git commit --message "chore(skills): update caveman from JuliusBrussee/caveman@<sha>"
+   ```
+
+### Caveman Skill History
+
+| Date | Upstream ref | Notes |
+|------|-------------|-------|
+| 2026-06-30 | main (approx. v1.9.0) | Initial adaptation. Single-mode pentest variant. Compresses agent reasoning; protects `report_vulnerability` fields. Verified: -36% output tokens, -15% input tokens, -15% cost on quick scan vs baseline. |
