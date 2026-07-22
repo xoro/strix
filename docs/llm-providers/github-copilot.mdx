@@ -1,0 +1,81 @@
+---
+title: "GitHub Copilot"
+description: "Configure Strix with GitHub Copilot (fork-specific)"
+---
+
+<Note>
+  GitHub Copilot support is a **fork-specific addition**, not part of upstream Strix.
+  It works through [litellm's built-in `github_copilot` provider](https://docs.litellm.ai/docs/providers/github_copilot),
+  which handles the device-code OAuth flow, token storage/refresh, and Copilot's
+  request headers entirely on its own. Strix only adds a one-time authentication
+  command and GitHub Enterprise Cloud (`*.ghe.com`) support on top of it.
+</Note>
+
+## Setup
+
+Authenticate once (this opens a device-code flow — visit the printed URL and enter the code):
+
+```bash
+strix --auth-github-copilot
+```
+
+Then configure the model:
+
+```bash
+export STRIX_LLM="github_copilot/gpt-4o"
+strix --target https://example.com
+```
+
+No `LLM_API_KEY` is needed — authentication is handled by the device-code flow above,
+and the resulting token is cached at `~/.config/litellm/github_copilot/`.
+
+## GitHub Enterprise Cloud (`*.ghe.com`)
+
+If your organization uses a GitHub Enterprise Cloud instance instead of `github.com`,
+pass its hostname when authenticating:
+
+```bash
+strix --auth-github-copilot --github-copilot-host octodemo.ghe.com
+```
+
+Then export the same hostname for scan runs, so completions are routed to the
+same enterprise endpoints:
+
+```bash
+export GITHUB_COPILOT_HOSTNAME="octodemo.ghe.com"
+export STRIX_LLM="github_copilot/gpt-4o"
+strix --target https://example.com
+```
+
+`GITHUB_COPILOT_HOSTNAME` derives all of the underlying litellm endpoint overrides
+(device-code URL, access-token URL, Copilot API key URL, API base, and the
+token-validation user endpoint) from a single hostname. You can still set any of
+litellm's individual `GITHUB_COPILOT_*` env vars directly if you need finer control —
+explicit values always take precedence over the derived ones.
+
+## Re-authenticating
+
+`strix --auth-github-copilot` is safe to run again at any time:
+
+- If the cached token is still valid, it's reused (no re-login).
+- If it's expired or invalid, cached tokens are cleared and a fresh device-code
+  login runs automatically.
+
+## Available Models
+
+Any model your Copilot subscription includes works, using the format
+`github_copilot/<model>`, e.g.:
+
+| Model | Configuration |
+|-------|---------------|
+| GPT-4o | `github_copilot/gpt-4o` |
+| Claude Sonnet | `github_copilot/claude-sonnet-4.5` |
+| o3-mini | `github_copilot/o3-mini` |
+
+## Notes
+
+- Requires an active GitHub Copilot subscription.
+- The device-code login runs once, before the TUI starts, so the code prompt is
+  never obscured by the interface.
+- If the underlying GitHub OAuth token is revoked or expires, the next scan will
+  fail with a connection error suggesting you re-run `strix --auth-github-copilot`.

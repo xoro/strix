@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import pytest
 from agents.model_settings import ModelSettings
+from agents.models.chatcmpl_helpers import HEADERS_OVERRIDE
 
 from strix.config.models import (
     RECOMMENDED_MODEL_NAMES,
+    _configure_github_copilot_headers,
     is_recommended_or_frontier_model,
     request_timeout_extra_args,
 )
@@ -86,3 +88,41 @@ def test_frontier_model_families_are_accepted(model_name: str) -> None:
 )
 def test_non_frontier_models_are_rejected(model_name: str) -> None:
     assert not is_recommended_or_frontier_model(model_name)
+
+
+class TestConfigureGithubCopilotHeaders:
+    """Fork-specific: strix.config.models._configure_github_copilot_headers().
+
+    Works around a litellm bug where any non-empty ``extra_headers`` makes
+    litellm's ``github_copilot`` provider skip its own Copilot request-header
+    injection. See strix/llm/copilot.py for the full explanation.
+    """
+
+    def test_sets_headers_override_for_copilot_model(self) -> None:
+        """A configured github_copilot/* model populates the SDK's HEADERS_OVERRIDE."""
+        token = HEADERS_OVERRIDE.set(None)
+        try:
+            _configure_github_copilot_headers("github_copilot/claude-sonnet-5")
+            override = HEADERS_OVERRIDE.get()
+            assert override is not None
+            assert "editor-version" in override
+        finally:
+            HEADERS_OVERRIDE.reset(token)
+
+    def test_noop_for_non_copilot_model(self) -> None:
+        """Non-Copilot models leave HEADERS_OVERRIDE untouched."""
+        token = HEADERS_OVERRIDE.set(None)
+        try:
+            _configure_github_copilot_headers("openai/gpt-4o")
+            assert HEADERS_OVERRIDE.get() is None
+        finally:
+            HEADERS_OVERRIDE.reset(token)
+
+    def test_noop_for_none_model(self) -> None:
+        """No configured model is a safe no-op."""
+        token = HEADERS_OVERRIDE.set(None)
+        try:
+            _configure_github_copilot_headers(None)
+            assert HEADERS_OVERRIDE.get() is None
+        finally:
+            HEADERS_OVERRIDE.reset(token)

@@ -36,6 +36,13 @@
 > [!TIP]
 > **New!** Strix integrates seamlessly with GitHub Actions and CI/CD pipelines. Automatically scan for vulnerabilities on every pull request and block insecure code before it reaches production - [Get started with no setup required](https://app.strix.ai).
 
+> [!NOTE]
+> **This is a fork** of [usestrix/strix](https://github.com/usestrix/strix) that adds GitHub
+> Copilot as an LLM provider (`STRIX_LLM=github_copilot/<model>`, including GitHub Enterprise
+> Cloud support via `strix --auth-github-copilot --github-copilot-host <host>.ghe.com`). See
+> [AGENTS.md](AGENTS.md) for an architecture overview and [MERGE.md](MERGE.md) for exactly what
+> differs from upstream and how to re-apply it after future upstream merges.
+
 ---
 
 

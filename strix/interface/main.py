@@ -52,6 +52,14 @@ from strix.interface.utils import (
     rewrite_localhost_targets,
     validate_config_file,
 )
+from strix.llm.copilot import (
+    apply_github_copilot_hostname_env,
+    authenticate_github_copilot,
+    github_copilot_token_paths,
+    has_cached_github_copilot_token,
+    is_github_copilot_model,
+    validate_github_copilot_access_token,
+)
 from strix.report.state import get_global_report_state
 from strix.report.writer import read_run_record, write_run_record
 from strix.telemetry import posthog, scarf
@@ -267,6 +275,73 @@ def _provider_import_hint(exc: BaseException, model: str) -> str | None:
     return None
 
 
+def _run_github_copilot_auth_command(host: str | None = None) -> None:
+    """Handle ``strix --auth-github-copilot``: run the device-code login and exit."""
+    console = Console()
+    apply_github_copilot_hostname_env(host)
+
+    if has_cached_github_copilot_token():
+        console.print()
+        console.print("[dim]Existing GitHub Copilot token found. Validating...[/]")
+        if validate_github_copilot_access_token():
+            console.print("[dim]Token is still valid — reusing it.[/]")
+        else:
+            console.print("[dim yellow]Token is expired or invalid. Starting fresh login...[/]")
+        console.print()
+
+    console.print(
+        Panel(
+            Text("Starting GitHub Copilot device-code authentication...", style="white"),
+            title="[bold white]STRIX",
+            title_align="left",
+            border_style="cyan",
+            padding=(1, 2),
+        )
+    )
+    console.print()
+
+    try:
+        authenticate_github_copilot(hostname=host)
+    except Exception as e:
+        error_text = Text()
+        error_text.append("GITHUB COPILOT AUTHENTICATION FAILED", style="bold red")
+        error_text.append("\n\n", style="white")
+        error_text.append(f"Error: {e}", style="dim white")
+        panel = Panel(
+            error_text,
+            title="[bold white]STRIX",
+            title_align="left",
+            border_style="red",
+            padding=(1, 2),
+        )
+        console.print(panel)
+        console.print()
+        sys.exit(1)
+
+    access_token_path, _ = github_copilot_token_paths()
+    success_text = Text()
+    success_text.append("GitHub Copilot authentication successful", style="bold #22c55e")
+    success_text.append("\n\n", style="white")
+    success_text.append("Token stored at: ", style="white")
+    success_text.append(str(access_token_path), style="#60a5fa")
+    success_text.append("\n\n", style="white")
+    success_text.append("You can now use GitHub Copilot as your LLM provider:\n", style="white")
+    success_text.append("  export STRIX_LLM='github_copilot/gpt-4o'\n", style="dim white")
+    if host:
+        success_text.append(f"  export GITHUB_COPILOT_HOSTNAME='{host}'\n", style="dim white")
+    success_text.append("  strix --target https://example.com", style="dim white")
+
+    panel = Panel(
+        success_text,
+        title="[bold white]STRIX",
+        title_align="left",
+        border_style="#22c55e",
+        padding=(1, 2),
+    )
+    console.print(panel)
+    console.print()
+
+
 async def warm_up_llm(show_model_warning: bool = True) -> None:
     console = Console()
     logger.info("Warming up LLM connection")
@@ -278,6 +353,43 @@ async def warm_up_llm(show_model_warning: bool = True) -> None:
         llm = settings.llm
 
         raw_model = (llm.model or "").strip()
+
+        if is_github_copilot_model(raw_model):
+            apply_github_copilot_hostname_env()
+            if not has_cached_github_copilot_token():
+                console.print(
+                    Panel(
+                        Text(
+                            "GitHub Copilot: no cached token found — starting device-code "
+                            "authentication...",
+                            style="white",
+                        ),
+                        title="[bold white]STRIX",
+                        title_align="left",
+                        border_style="cyan",
+                        padding=(1, 2),
+                    )
+                )
+                console.print()
+                try:
+                    authenticate_github_copilot()
+                except Exception as e:
+                    error_text = Text()
+                    error_text.append("GITHUB COPILOT AUTHENTICATION FAILED", style="bold red")
+                    error_text.append("\n\n", style="white")
+                    error_text.append(f"Error: {e}", style="dim white")
+                    console.print(
+                        Panel(
+                            error_text,
+                            title="[bold white]STRIX",
+                            title_align="left",
+                            border_style="red",
+                            padding=(1, 2),
+                        )
+                    )
+                    console.print()
+                    sys.exit(1)
+
         if (
             raw_model
             and "/" not in raw_model
@@ -363,6 +475,12 @@ async def warm_up_llm(show_model_warning: bool = True) -> None:
         hint = _provider_import_hint(e, raw_model)
         if hint is not None:
             error_text.append(f"\n{hint}\n", style="bold yellow")
+        if is_github_copilot_model(raw_model):
+            error_text.append(
+                "\nIf your GitHub Copilot token expired or is invalid, run "
+                "'strix --auth-github-copilot' again.\n",
+                style="bold yellow",
+            )
         error_text.append(f"\nError: {e}", style="dim white")
 
         panel = Panel(
@@ -446,6 +564,28 @@ Examples:
         "--version",
         action="version",
         version=f"strix {get_version()}",
+    )
+
+    parser.add_argument(
+        "--auth-github-copilot",
+        action="store_true",
+        help=(
+            "Authenticate with GitHub Copilot (device-code OAuth) and exit. Run this once "
+            "before using STRIX_LLM='github_copilot/<model>'. Combine with "
+            "--github-copilot-host for GitHub Enterprise Cloud (*.ghe.com) instances."
+        ),
+    )
+
+    parser.add_argument(
+        "--github-copilot-host",
+        type=str,
+        metavar="HOST",
+        help=(
+            "GitHub Enterprise Cloud hostname to authenticate against with "
+            "--auth-github-copilot (e.g. 'octodemo.ghe.com'). Equivalent to setting the "
+            "GITHUB_COPILOT_HOSTNAME env var; export it too so later scan runs talk to the "
+            "same endpoints."
+        ),
     )
 
     parser.add_argument(
@@ -565,6 +705,9 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    if args.auth_github_copilot:
+        return args
 
     if args.instruction and args.instruction_file:
         parser.error(
@@ -881,6 +1024,10 @@ def main() -> None:
         return
 
     args = parse_arguments()
+
+    if args.auth_github_copilot:
+        _run_github_copilot_auth_command(args.github_copilot_host)
+        return
 
     if args.config:
         apply_config_override(validate_config_file(args.config))

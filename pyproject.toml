@@ -242,6 +242,11 @@ ignore = [
 "strix/tools/todo/tools.py" = ["TC002"]
 "strix/tools/thinking/tool.py" = ["TC002"]
 "strix/tools/web_search/tool.py" = ["TC002"]
+# Lazy litellm/httpx imports to avoid importing litellm's github_copilot submodule
+# (and the httpx client) unless a github_copilot/* model is actually configured.
+"strix/llm/copilot.py" = ["PLC0415"]
+# Fake OAuth device-code tokens/URLs in fixtures, not real credentials.
+"tests/test_copilot.py" = ["S105"]
 "strix/tools/proxy/tools.py" = ["TC002", "PLR0911"]
 "strix/tools/agents_graph/tools.py" = ["TC002"]
 "strix/agents/factory.py" = ["TC002"]

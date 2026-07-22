@@ -119,6 +119,7 @@ def configure_sdk_model_defaults(settings: Settings) -> None:
     set_tracing_disabled(True)
     _configure_litellm_compatibility()
     _configure_openrouter_attribution(llm.model)
+    _configure_github_copilot_headers(llm.model)
     if llm.api_key:
         set_default_openai_key(llm.api_key, use_for_tracing=False)
         _configure_litellm_default("api_key", llm.api_key)
@@ -129,6 +130,28 @@ def configure_sdk_model_defaults(settings: Settings) -> None:
         set_default_openai_api("chat_completions")
     else:
         set_default_openai_api("responses")
+
+
+def _configure_github_copilot_headers(model_name: str | None) -> None:
+    """Work around a litellm bug: any non-empty ``extra_headers`` makes litellm's
+    ``github_copilot`` provider skip its own Copilot request-header injection
+    entirely (see ``strix/llm/copilot.py`` for the full explanation and repro).
+    The SDK's ``LitellmModel`` always sends a non-empty ``extra_headers`` (at
+    least a ``User-Agent``), so every real Copilot call hits this. Setting the
+    SDK's own ``HEADERS_OVERRIDE`` context var — which takes precedence over
+    everything else ``LitellmModel._merge_headers()`` merges in — pre-fills the
+    headers litellm would otherwise have added itself, for every call in this
+    process (root + child agents, warm-up, everything routes through the same
+    ``LitellmModel``). No-op for non-Copilot models.
+    """
+    from strix.llm.copilot import github_copilot_extra_headers, is_github_copilot_model
+
+    if not is_github_copilot_model(model_name):
+        return
+
+    from agents.models.chatcmpl_helpers import HEADERS_OVERRIDE
+
+    HEADERS_OVERRIDE.set(github_copilot_extra_headers(model_name))
 
 
 def _mirror_api_key_to_provider_env(model_name: str | None, api_key: str) -> None:
